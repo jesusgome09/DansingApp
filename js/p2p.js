@@ -3,15 +3,11 @@ let connections = [];
 let retryTimer = null;
 let globalDataCallback = null;
 
-// Configuración STUN pública de alta disponibilidad
 const peerConfig = {
-  debug: 1,
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' }
+      { urls: 'stun:stun1.l.google.com:19302' }
     ]
   }
 };
@@ -26,14 +22,14 @@ function initPeerNetwork(myId, onOpen, onError, onDataReceived) {
   peer = new Peer(myId, peerConfig);
 
   peer.on('open', (id) => {
-    console.log("🌐 Peer ID asignado:", id);
+    console.log("🌐 Conectado a la red con ID:", id);
     if (onOpen) onOpen(id);
   });
 
   peer.on('error', (err) => {
-    console.warn("⚠️ PeerJS Error:", err.type, err.message);
+    console.warn("⚠️ PeerJS Error:", err.type);
     if (err.type === 'unavailable-id') {
-      if (onError) onError({ type: 'DIRECTOR_TAKEN', message: 'Ya existe un Director activo.' });
+      if (onError) onError({ type: 'DIRECTOR_TAKEN' });
     } else {
       if (onError) onError(err);
     }
@@ -46,38 +42,29 @@ function initPeerNetwork(myId, onOpen, onError, onDataReceived) {
 
 function bindIncomingConnection(conn) {
   conn.on('open', () => {
-    // Filtrar conexiones cerradas o duplicadas
     connections = connections.filter(c => c.open && c.peer !== conn.peer);
     connections.push(conn);
     
-    console.log(`🤝 Conexión establecida con: ${conn.peer}. Total activos: ${connections.length}`);
+    console.log(`🤝 Nuevo dispositivo enlazado: ${conn.peer}. Total: ${connections.length}`);
     if (window.onP2PConnected) window.onP2PConnected(conn.peer);
   });
 
   conn.on('data', (data) => {
-    console.log("📩 Comando P2P recibido:", data);
     if (globalDataCallback) globalDataCallback(data);
 
-    // Retransmisión del Director hacia la banda
+    // SI SOMOS DIRECTOR: Re-transmitir CUALQUIER comando a toda la banda
     const isDirector = document.getElementById('director-checkbox')?.checked;
-    if (isDirector && (data.type === 'CHAT_MSG' || data.type === 'UPDATE_METRONOME' || data.type === 'QUICK_ALERT')) {
+    if (isDirector) {
       broadcastFromDirector(data, conn.peer);
     }
   });
 
   conn.on('close', () => {
     connections = connections.filter(c => c.peer !== conn.peer);
-    console.log(`❌ Dispositivo desconectado: ${conn.peer}`);
     if (window.onP2PDisconnected) window.onP2PDisconnected();
-  });
-
-  conn.on('error', (err) => {
-    console.error("⚠️ Error en canal P2P:", err);
-    connections = connections.filter(c => c.peer !== conn.peer);
   });
 }
 
-// CONEXIÓN DIRECTA CON REINTENTO LIMPIO
 function connectToPeerWithRetry(remoteId, onDataReceived, onSuccess) {
   globalDataCallback = onDataReceived;
   if (retryTimer) clearTimeout(retryTimer);
@@ -88,17 +75,10 @@ function connectToPeerWithRetry(remoteId, onDataReceived, onSuccess) {
       return;
     }
 
-    // Si ya hay conexión abierta, detener los intentos
     if (connections.length > 0 && connections[0].open && connections[0].peer === remoteId) {
       if (onSuccess) onSuccess(remoteId);
       return;
     }
-
-    console.log(`🔍 Intentando enlazar con el Director (${remoteId})...`);
-    
-    // Limpiar canales previos en progreso
-    connections.forEach(c => { try { c.close(); } catch(e){} });
-    connections = [];
 
     const conn = peer.connect(remoteId, { reliable: true });
 
@@ -110,19 +90,16 @@ function connectToPeerWithRetry(remoteId, onDataReceived, onSuccess) {
       connections = [conn];
       bindIncomingConnection(conn);
 
-      console.log(`✅ ¡Enlazado exitosamente con el Director!`);
       if (onSuccess) onSuccess(remoteId);
       if (window.onP2PConnected) window.onP2PConnected(remoteId);
     });
 
-    // Si no conecta en 3.5 segundos, reintentar de forma limpia
     retryTimer = setTimeout(() => {
       if (!connected) {
-        console.warn("⏳ Reintentando señalización con el Director...");
         try { conn.close(); } catch(e){}
         attemptConnection();
       }
-    }, 3500);
+    }, 3000);
   }
 
   attemptConnection();
@@ -130,18 +107,10 @@ function connectToPeerWithRetry(remoteId, onDataReceived, onSuccess) {
 
 function sendP2PData(data) {
   connections = connections.filter(c => c && c.open);
-
-  if (connections.length === 0) {
-    console.warn("⚠️ No hay canales P2P activos para transmitir.");
-    return;
-  }
+  if (connections.length === 0) return;
 
   connections.forEach(conn => {
-    try {
-      conn.send(data);
-    } catch(err) {
-      console.error("❌ Error enviando a:", conn.peer, err);
-    }
+    try { conn.send(data); } catch(err){}
   });
 }
 

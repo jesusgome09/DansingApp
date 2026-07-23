@@ -1,8 +1,10 @@
 const STORAGE_USER_NAME = 'dansing_user_name';
 const STORAGE_USER_ROLE = 'dansing_user_role';
+const STORAGE_USER_UUID = 'dansing_user_uuid'; // ID único permanente
 const STORAGE_ROOM_CODE = 'dansing_room_code';
 const STORAGE_SAVED_KEYS = 'dansing_saved_keys';
 const STORAGE_SAVED_BPMS = 'dansing_saved_bpms';
+const STORAGE_SAVED_SETLIST = 'dansing_saved_setlist';
 
 let currentSong = null;
 let currentSectionId = null;
@@ -19,7 +21,9 @@ let metronomeInterval = null;
 // TAMAÑO DE FUENTE
 let currentFontSize = 1.15;
 
-// DECLARACIÓN PREVIA DE VISTAS PARA EVITAR "ReferenceError"
+// SETLIST
+let setlist = [];
+
 function showWaitingScreen() {
   const waitingEl = document.getElementById('waiting-screen');
   const songCardEl = document.getElementById('song-card');
@@ -39,6 +43,15 @@ function log(msg) {
   el.scrollTop = el.scrollHeight;
 }
 
+function getUniqueUserId() {
+  let uuid = localStorage.getItem(STORAGE_USER_UUID);
+  if (!uuid) {
+    uuid = 'user-' + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem(STORAGE_USER_UUID, uuid);
+  }
+  return uuid;
+}
+
 function checkUserSession() {
   const savedName = localStorage.getItem(STORAGE_USER_NAME);
   const savedRole = localStorage.getItem(STORAGE_USER_ROLE);
@@ -52,12 +65,14 @@ function checkUserSession() {
     
     document.getElementById('profile-info').innerText = `${savedName} (${getRoleBadge(savedRole)})`;
     
-    // REGLA STRICTA: SOLO EL BATERISTA VE Y CONTROLA EL METRÓNOMO
     if (savedRole === 'baterista') {
       document.getElementById('metronome-controls').style.display = 'flex';
     } else {
       document.getElementById('metronome-controls').style.display = 'none';
     }
+
+    // Cargar Setlist de la memoria local si existe
+    loadSetlistFromStorage();
 
     showWaitingScreen();
     autoConnectNetwork(savedName, savedRole);
@@ -85,6 +100,7 @@ function saveUserProfile() {
   localStorage.setItem(STORAGE_USER_NAME, cleanName);
   localStorage.setItem(STORAGE_USER_ROLE, roleInput);
   localStorage.setItem(STORAGE_ROOM_CODE, 'ensayo');
+  getUniqueUserId();
 
   checkUserSession();
 }
@@ -96,11 +112,11 @@ function resetUserProfile() {
   }
 }
 
-// RED P2P
+// RED P2P CON ID ÚNICO Y ESTADO DE DIRECTOR
 function autoConnectNetwork(name, role) {
   const roomCode = localStorage.getItem(STORAGE_ROOM_CODE) || 'ensayo';
-  const uniqueSession = Math.floor(Math.random() * 10000);
-  const myNetworkId = `${roomCode}-${name}-${uniqueSession}`;
+  const myUniqueId = getUniqueUserId();
+  const myNetworkId = `${roomCode}-${name}-${myUniqueId}`;
 
   initPeerNetwork(
     myNetworkId,
@@ -109,8 +125,7 @@ function autoConnectNetwork(name, role) {
       connectToLeader(roomCode);
     },
     (err) => {
-      log(`⚠️ Estado red: ${err.type}`);
-      document.getElementById('net-status').innerHTML = `<span style="color:#ff5252">⚠️ Error de red (${err.type || 'desconocido'})</span>`;
+      document.getElementById('net-status').innerHTML = `<span style="color:#ff5252">⚠️ Error de red</span>`;
     },
     handleIncomingP2PData
   );
@@ -118,10 +133,7 @@ function autoConnectNetwork(name, role) {
 
 function connectToLeader(roomCode) {
   const leaderId = `${roomCode}-director`;
-  
   connectToPeerWithRetry(leaderId, handleIncomingP2PData, () => {
-    document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-green)">✅ Conectado con el Director</span>`;
-    log('🔄 Solicitando estado actual al Director...');
     sendP2PData({ type: 'GET_CURRENT_STATE' });
   });
 }
@@ -138,19 +150,16 @@ function toggleDirector(isDirectorCheck) {
       leaderId,
       () => {
         log('👑 Modo Director ACTIVO.');
-        document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-green)">👑 Director Activo</span>`;
+        document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-green)">👑 Director Activo (${savedName})</span>`;
         document.getElementById('director-catalog-card').style.display = 'block';
         
-        // EL DIRECTOR NUNCA TIENE CONTROLES DE METRÓNOMO A MENOS QUE SEA BATERISTA
-        if (localStorage.getItem(STORAGE_USER_ROLE) !== 'baterista') {
-          document.getElementById('metronome-controls').style.display = 'none';
-        }
-
+        // Avisar a la banda quién es el Director actual
+        sendP2PData({ type: 'DIRECTOR_ANNOUNCE', name: savedName });
         renderCatalog();
       },
       (err) => {
         if (err.type === 'DIRECTOR_TAKEN') {
-          alert(`❌ ¡Acceso denegado! Ya hay un Director activo en el ensayo.`);
+          alert(`❌ Ya existe un Director activo en este ensayo.`);
           checkbox.checked = false;
           document.getElementById('director-catalog-card').style.display = 'none';
         }
@@ -160,29 +169,27 @@ function toggleDirector(isDirectorCheck) {
   } else {
     document.getElementById('director-catalog-card').style.display = 'none';
     document.getElementById('director-panel').style.display = 'none';
-    
-    if (localStorage.getItem(STORAGE_USER_ROLE) !== 'baterista') {
-      document.getElementById('metronome-controls').style.display = 'none';
-    }
-    
     showWaitingScreen();
     autoConnectNetwork(savedName, localStorage.getItem(STORAGE_USER_ROLE));
   }
 }
 
-// MANEJO DE RECEPCIÓN DE DATOS EN TRAP
+// RECEPCIÓN Y TRATAMIENTO DE COMANDOS P2P
 function handleIncomingP2PData(data) {
   if (!data) return;
 
   const isDirector = document.getElementById('director-checkbox')?.checked;
 
-  // Si ya nos conectamos con el Director y NO somos Director, ocultamos la opción de "Tomar Control"
-  const switchCard = document.getElementById('director-switch-card');
-  if (switchCard && !isDirector) {
-    switchCard.style.display = 'none';
+  if (data.type === 'DIRECTOR_ANNOUNCE') {
+    document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-green)">👑 Director: ${data.name}</span>`;
+    const switchCard = document.getElementById('director-switch-card');
+    if (switchCard && !isDirector) switchCard.style.display = 'none';
   }
 
   if (data.type === 'GET_CURRENT_STATE' && isDirector) {
+    const savedName = localStorage.getItem(STORAGE_USER_NAME);
+    sendP2PData({ type: 'DIRECTOR_ANNOUNCE', name: savedName });
+
     if (currentSong) {
       sendP2PData({
         type: 'SYNC_STATE',
@@ -190,7 +197,8 @@ function handleIncomingP2PData(data) {
         semitones: globalSemitones,
         currentSection: currentSectionId,
         bpm: currentBpm,
-        isMetroPlaying: isMetronomePlaying
+        isMetroPlaying: isMetronomePlaying,
+        setlist: setlist
       });
     }
     return;
@@ -205,6 +213,12 @@ function handleIncomingP2PData(data) {
     document.getElementById('song-card').style.display = 'block';
     
     renderCurrentSong();
+
+    if (data.setlist) {
+      setlist = data.setlist;
+      saveSetlistToStorage();
+      renderSetlistUI();
+    }
     
     if (data.currentSection) {
       highlightAndScrollSection(data.currentSection);
@@ -213,12 +227,11 @@ function handleIncomingP2PData(data) {
     if (data.bpm) {
       currentBpm = data.bpm;
       updateBpmUI(currentBpm);
-      if (data.isMetroPlaying && !isMetronomePlaying) {
-        startMetronomeVisual();
-      } else if (!data.isMetroPlaying && isMetronomePlaying) {
-        stopMetronomeVisual();
-      }
     }
+
+    // Restaurar botón de cuenta regresiva al abrir canción
+    const btnCD = document.getElementById('btn-start-countdown');
+    if (btnCD) btnCD.style.display = 'block';
 
     log(`🎵 Canción lista: ${currentSong.title}`);
   }
@@ -244,7 +257,6 @@ function handleIncomingP2PData(data) {
     runCountdownAnimation();
   }
 
-  // MENSAJE DE CHAT: SE GUARDA Y SE MUESTRA COMO AVISO EMERGENTE EN PANTALLA
   if (data.type === 'CHAT_MSG') {
     appendChatMessage(data.author, data.text);
     showToastAlert(`💬 ${data.author.toUpperCase()}: ${data.text}`);
@@ -261,9 +273,86 @@ function handleIncomingP2PData(data) {
       else stopMetronomeVisual();
     }
   }
+
+  // PARAR METRÓNOMO AL FINALIZAR CANCIÓN
+  if (data.type === 'STOP_SONG') {
+    stopMetronomeVisual();
+    const btnCD = document.getElementById('btn-start-countdown');
+    if (btnCD) btnCD.style.display = 'block';
+    log('🛑 La canción ha finalizado.');
+  }
+
+  if (data.type === 'UPDATE_SETLIST') {
+    setlist = data.setlist;
+    saveSetlistToStorage();
+    renderSetlistUI();
+  }
 }
 
-// METRÓNOMO CONTROL EXCLUSIVO BATERISTA (VALORES IMPARES Y LIBRES)
+// GESTIÓN Y PERSISTENCIA DEL SETLIST (LOCALSTORAGE Y MULTI-DISPOSITIVO)
+function toggleCatalogVisibility() {
+  const wrapper = document.getElementById('catalog-foldable-wrapper');
+  if (!wrapper) return;
+  const isHidden = wrapper.style.display === 'none';
+  wrapper.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) renderCatalog();
+}
+
+function toggleSetlistSong(songId) {
+  const song = REPERTORIO.find(s => s.id === songId);
+  if (!song) return;
+
+  const idx = setlist.findIndex(s => s.id === songId);
+  if (idx === -1) {
+    setlist.push(song);
+  } else {
+    setlist.splice(idx, 1);
+  }
+
+  saveSetlistToStorage();
+  renderSetlistUI();
+  renderCatalog(document.getElementById('catalog-search')?.value || "");
+
+  // Enviar actualización del setlist a todos
+  sendP2PData({ type: 'UPDATE_SETLIST', setlist: setlist });
+}
+
+function saveSetlistToStorage() {
+  localStorage.setItem(STORAGE_SAVED_SETLIST, JSON.stringify(setlist));
+}
+
+function loadSetlistFromStorage() {
+  const saved = localStorage.getItem(STORAGE_SAVED_SETLIST);
+  if (saved) {
+    try { setlist = JSON.parse(saved); renderSetlistUI(); } catch(e){}
+  }
+}
+
+function renderSetlistUI() {
+  const container = document.getElementById('setlist-items');
+  if (!container) return;
+
+  if (setlist.length === 0) {
+    container.innerHTML = `<span style="color:#777;">No hay canciones seleccionadas. Toca <b>"📂 Añadir Canciones"</b> para armar tu lista.</span>`;
+    return;
+  }
+
+  const isDirector = document.getElementById('director-checkbox')?.checked;
+
+  let html = '<div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">';
+  setlist.forEach((song, idx) => {
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#181b29; padding:8px 10px; border-radius:6px; border:1px solid #26293b;">
+        <span><b>${idx + 1}. ${song.title}</b> <small style="color:var(--accent-orange); margin-left:6px;">${song.keyOriginal}</small></span>
+        ${isDirector ? `<button class="btn btn-cyan" style="width:auto; padding:5px 12px; font-size:0.8rem; margin:0;" onclick="directorSelectSong('${song.id}')">▶ Tocar</button>` : ''}
+      </div>
+    `;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// METRÓNOMO CONTROL EXCLUSIVO
 function adjustBpm(delta) {
   if (localStorage.getItem(STORAGE_USER_ROLE) !== 'baterista') return;
 
@@ -360,58 +449,7 @@ function getSavedBpmForSong(songId) {
   return saved[songId] !== undefined ? saved[songId] : null;
 }
 
-// ABRIR / CERRAR REPERTORIO COMPLETO
-function toggleCatalogVisibility() {
-  const wrapper = document.getElementById('catalog-foldable-wrapper');
-  if (!wrapper) return;
-  const isHidden = wrapper.style.display === 'none';
-  wrapper.style.display = isHidden ? 'block' : 'none';
-  if (isHidden) renderCatalog();
-}
-
-// FUNCIONALIDAD DE SETLIST
-let setlist = [];
-
-function toggleSetlistSong(songId) {
-  const song = REPERTORIO.find(s => s.id === songId);
-  if (!song) return;
-
-  const idx = setlist.findIndex(s => s.id === songId);
-  if (idx === -1) {
-    setlist.push(song);
-    log(`➕ Añadida a Setlist: ${song.title}`);
-  } else {
-    setlist.splice(idx, 1);
-    log(`➖ Removida de Setlist: ${song.title}`);
-  }
-
-  renderSetlistUI();
-  renderCatalog(document.getElementById('catalog-search')?.value || "");
-}
-
-function renderSetlistUI() {
-  const container = document.getElementById('setlist-items');
-  if (!container) return;
-
-  if (setlist.length === 0) {
-    container.innerHTML = `<span style="color:#777;">No hay canciones seleccionadas. Toca <b>"📂 Añadir Canciones"</b> para armar tu lista.</span>`;
-    return;
-  }
-
-  let html = '<div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">';
-  setlist.forEach((song, idx) => {
-    html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; background:#181b29; padding:8px 10px; border-radius:6px; border:1px solid #26293b;">
-        <span><b>${idx + 1}. ${song.title}</b> <small style="color:var(--accent-orange); margin-left:6px;">${song.keyOriginal}</small></span>
-        <button class="btn btn-cyan" style="width:auto; padding:5px 12px; font-size:0.8rem; margin:0;" onclick="directorSelectSong('${song.id}')">▶ Tocar</button>
-      </div>
-    `;
-  });
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-// CATÁLOGO COMPACTO Y MINIMALISTA
+// CANCIONES
 function renderCatalog(filter = "") {
   const container = document.getElementById('catalog-list');
   if (!container) return;
@@ -451,67 +489,6 @@ function renderCatalog(filter = "") {
   });
 }
 
-function renderSetlistUI() {
-  const container = document.getElementById('setlist-items');
-  if (!container) return;
-
-  if (setlist.length === 0) {
-    container.innerHTML = "No hay canciones en el Setlist del Domingo.";
-    return;
-  }
-
-  let html = '<div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">';
-  setlist.forEach((song, idx) => {
-    html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; background:#181b29; padding:6px 10px; border-radius:6px;">
-        <span><b>${idx + 1}. ${song.title}</b> <small style="color:#aaa">(${song.keyOriginal})</small></span>
-        <button class="btn btn-cyan" style="width:auto; padding:4px 8px; font-size:0.75rem;" onclick="directorSelectSong('${song.id}')">▶ Tocar</button>
-      </div>
-    `;
-  });
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-// CATÁLOGO CON OPCIÓN DE AÑADIR AL SETLIST
-function renderCatalog(filter = "") {
-  const container = document.getElementById('catalog-list');
-  container.innerHTML = '';
-
-  const categorias = ["Adoración", "Alabanzas"];
-
-  categorias.forEach(cat => {
-    const canciones = REPERTORIO.filter(s => s.category === cat && (s.title.toLowerCase().includes(filter) || s.artist.toLowerCase().includes(filter)));
-
-    if (canciones.length > 0) {
-      const header = document.createElement('h4');
-      header.style.cssText = 'color:var(--accent-cyan); margin-top:12px; font-size:0.9rem;';
-      header.innerText = cat;
-      container.appendChild(header);
-
-      canciones.forEach(song => {
-        const savedKey = getSavedKeyForSong(song.id);
-        const savedBpm = getSavedBpmForSong(song.id) || song.bpm;
-        const isInSetlist = setlist.some(s => s.id === song.id);
-
-        const card = document.createElement('div');
-        card.style.cssText = 'display:flex; gap:6px; margin-bottom:6px;';
-
-        card.innerHTML = `
-          <button class="btn btn-sec" style="flex:1; text-align:left; justify-content:space-between; margin:0; background:#1e2030;" onclick="directorSelectSong('${song.id}')">
-            <span><b>${song.title}</b> <small style="color:#aaa">(${song.artist})</small></span>
-            <span><small style="color:#64b5f6; margin-right:8px;">${savedBpm} BPM</small><span style="color:var(--accent-orange)">${savedKey !== null ? calcularNotaTono(song.keyOriginal, savedKey) : song.keyOriginal}</span></span>
-          </button>
-          <button class="btn ${isInSetlist ? 'btn-orange' : 'btn-sec'}" style="width:auto; padding:0 12px; font-size:0.8rem;" onclick="toggleSetlistSong('${song.id}')">
-            ${isInSetlist ? '✓' : '+ List'}
-          </button>
-        `;
-        container.appendChild(card);
-      });
-    }
-  });
-}
-
 function directorSelectSong(songId) {
   currentSong = REPERTORIO.find(s => s.id === songId);
   currentSectionId = null;
@@ -525,9 +502,7 @@ function directorSelectSong(songId) {
   updateBpmUI(currentBpm);
 
   if (isMetronomePlaying) {
-    isMetronomePlaying = false;
     stopMetronomeVisual();
-    updateMetronomeButtonUI();
   }
 
   document.getElementById('waiting-screen').style.display = 'none';
@@ -541,10 +516,11 @@ function directorSelectSong(songId) {
     songId: songId, 
     semitones: globalSemitones,
     bpm: currentBpm,
-    isMetroPlaying: false 
+    isMetroPlaying: false,
+    setlist: setlist
   });
   
-  log(`📢 Canción transmitida: ${currentSong.title} (${currentBpm} BPM)`);
+  log(`📢 Canción transmitida: ${currentSong.title}`);
 }
 
 function renderCurrentSong() {
@@ -585,8 +561,12 @@ function renderCurrentSong() {
   updateKeyControlsUI(semitonesToUse);
 }
 
-// CUENTA REGRESIVA CON AUTO-START
+// CUENTA REGRESIVA
 function sendCountdownCommand() {
+  // Ocultar botón de cuenta regresiva mientras suena la canción
+  const btnCD = document.getElementById('btn-start-countdown');
+  if (btnCD) btnCD.style.display = 'none';
+
   runCountdownAnimation();
   sendP2PData({ type: 'START_COUNTDOWN' });
   log('⏱️ Cuenta regresiva iniciada...');
@@ -634,13 +614,78 @@ function runCountdownAnimation() {
   }, 1000);
 }
 
-// CHAT FLOTANTE
-function toggleChatPanel() {
-  const panel = document.getElementById('chat-panel');
-  panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+// CONTROLES DEL DIRECTOR
+function buildDirectorControls(sections) {
+  const container = document.getElementById('section-buttons');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const btnCountdown = document.createElement('button');
+  btnCountdown.id = 'btn-start-countdown';
+  btnCountdown.className = 'btn btn-orange';
+  btnCountdown.style.cssText = 'margin-bottom: 10px; font-size: 0.95rem;';
+  btnCountdown.innerText = '⏱️ Iniciar Cuenta Regresiva (3, 2, 1)';
+  btnCountdown.onclick = () => sendCountdownCommand();
+  container.appendChild(btnCountdown);
+
+  sections.forEach((sec) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sec';
+    btn.innerText = sec.name;
+    btn.onclick = () => triggerJump(sec.id);
+    container.appendChild(btn);
+  });
+
+  const alertContainer = document.createElement('div');
+  alertContainer.style.cssText = 'width:100%; margin-top:10px; border-top:1px solid #333; padding-top:8px; display:flex; flex-wrap:wrap; gap:4px;';
+  
+  const alerts = ["🔁 Repetir Coro", "🛑 Finalizar", "🤫 Solo Voces", "🎹 Instrumental/Espontáneo"];
+  alerts.forEach(msg => {
+    const b = document.createElement('button');
+    b.className = 'btn-alert';
+    b.innerText = msg;
+    b.onclick = () => {
+      if (msg.includes("Finalizar")) {
+        // Al darle Finalizar, se apaga el metrónomo en todos los dispositivos
+        stopMetronomeVisual();
+        sendP2PData({ type: 'STOP_SONG' });
+      }
+      sendQuickAlert(msg);
+    };
+    alertContainer.appendChild(b);
+  });
+
+  container.appendChild(alertContainer);
 }
 
-// ENVIAR CHAT
+// CHAT Y AVISOS
+function sendMusicianAlert(msg) {
+  const savedName = localStorage.getItem(STORAGE_USER_NAME) || 'Músico';
+  const fullMsg = `📢 ${savedName.toUpperCase()}: ${msg}`;
+  
+  showToastAlert(fullMsg);
+  sendP2PData({ type: 'QUICK_ALERT', message: fullMsg });
+}
+
+function sendQuickAlert(message) {
+  showToastAlert(message);
+  sendP2PData({ type: 'QUICK_ALERT', message: message });
+}
+
+function showToastAlert(msg) {
+  const toast = document.getElementById('quick-toast');
+  if (!toast) return;
+
+  if (toastTimeout) clearTimeout(toastTimeout);
+
+  toast.innerText = msg;
+  toast.classList.add('show');
+
+  toastTimeout = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 7000);
+}
+
 function sendChatMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -648,8 +693,6 @@ function sendChatMessage() {
 
   const savedName = localStorage.getItem(STORAGE_USER_NAME) || 'Músico';
   appendChatMessage(savedName, text);
-
-  // También nos muestra la alerta a nosotros
   showToastAlert(`💬 ${savedName.toUpperCase()}: ${text}`);
 
   sendP2PData({ type: 'CHAT_MSG', author: savedName, text: text });
@@ -665,7 +708,7 @@ function appendChatMessage(author, text) {
   container.scrollTop = container.scrollHeight;
 }
 
-// FUNCIONES AUXILIARES
+// AUXILIARES
 function changeFontSize(delta) {
   currentFontSize = Math.max(0.8, Math.min(2.0, currentFontSize + (delta * 0.1)));
   const viewer = document.getElementById('song-viewer');
@@ -725,71 +768,6 @@ function updateKeyControlsUI(semitones) {
   let semitonoTexto = semitones === 0 ? "(Original)" : semitones > 0 ? `(+${semitones})` : `(${semitones})`;
 
   el.innerText = `Tono: ${notaActual} ${semitonoTexto}`;
-}
-
-function buildDirectorControls(sections) {
-  const container = document.getElementById('section-buttons');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const btnCountdown = document.createElement('button');
-  btnCountdown.className = 'btn btn-orange';
-  btnCountdown.style.cssText = 'margin-bottom: 10px; font-size: 0.95rem;';
-  btnCountdown.innerText = '⏱️ Iniciar Cuenta Regresiva (3, 2, 1)';
-  btnCountdown.onclick = () => sendCountdownCommand();
-  container.appendChild(btnCountdown);
-
-  sections.forEach((sec) => {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-sec';
-    btn.innerText = sec.name;
-    btn.onclick = () => triggerJump(sec.id);
-    container.appendChild(btn);
-  });
-
-  const alertContainer = document.createElement('div');
-  alertContainer.style.cssText = 'width:100%; margin-top:10px; border-top:1px solid #333; padding-top:8px; display:flex; flex-wrap:wrap; gap:4px;';
-  
-  const alerts = ["🔁 Repetir Coro", "🛑 Finalizar", "🤫 Solo Voces", "🎹 Instrumental/Espontáneo"];
-  alerts.forEach(msg => {
-    const btn = document.className = 'btn-alert';
-    const b = document.createElement('button');
-    b.className = 'btn-alert';
-    b.innerText = msg;
-    b.onclick = () => sendQuickAlert(msg);
-    alertContainer.appendChild(b);
-  });
-
-  container.appendChild(alertContainer);
-}
-
-function sendMusicianAlert(msg) {
-  const savedName = localStorage.getItem(STORAGE_USER_NAME) || 'Músico';
-  const fullMsg = `📢 ${savedName.toUpperCase()}: ${msg}`;
-  
-  showToastAlert(fullMsg);
-  sendP2PData({ type: 'QUICK_ALERT', message: fullMsg });
-  log(`Enviado aviso: "${fullMsg}"`);
-}
-
-function sendQuickAlert(message) {
-  showToastAlert(message);
-  sendP2PData({ type: 'QUICK_ALERT', message: message });
-  log(`📣 Alerta enviada: "${message}"`);
-}
-
-function showToastAlert(msg) {
-  const toast = document.getElementById('quick-toast');
-  if (!toast) return;
-
-  if (toastTimeout) clearTimeout(toastTimeout);
-
-  toast.innerText = msg;
-  toast.classList.add('show');
-
-  toastTimeout = setTimeout(() => {
-    toast.classList.remove('show');
-  }, 7000);
 }
 
 function extractIntroContent(content, role, semitones) {
