@@ -434,6 +434,7 @@ body.mode-tv .tv-section-block.active-tv-section {
   to { opacity: 1; transform: translateY(0); }
 }
 /* PANTALLA STANDBY PARA MODO TV CON IMAGEN HOLY */
+
 body.mode-tv #waiting-screen {
   position: fixed;
   top: 0;
@@ -446,10 +447,16 @@ body.mode-tv #waiting-screen {
   border-radius: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  z-index: 100;
+  z-index: 50; /* Z-index menor que la canción para que no tape */
   display: flex !important;
   justify-content: center;
   align-items: center;
+}
+
+/* Cuando la canción se abre, ocultamos completamente el standby */
+body.mode-tv #song-card {
+  position: relative;
+  z-index: 200 !important;
 }
 
 body.mode-tv #waiting-app-view {

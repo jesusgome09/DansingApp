@@ -25,11 +25,19 @@ let currentFontSize = 1.15;
 // SETLIST
 let setlist = [];
 
+// CONTROL DE VISTAS (STANDBY vs CANCIÓN)
 function showWaitingScreen() {
   const waitingEl = document.getElementById('waiting-screen');
   const songCardEl = document.getElementById('song-card');
-  if (waitingEl) waitingEl.style.display = 'block';
+  if (waitingEl) waitingEl.style.display = 'flex';
   if (songCardEl) songCardEl.style.display = 'none';
+}
+
+function showSongScreen() {
+  const waitingEl = document.getElementById('waiting-screen');
+  const songCardEl = document.getElementById('song-card');
+  if (waitingEl) waitingEl.style.display = 'none';
+  if (songCardEl) songCardEl.style.display = 'block';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,13 +74,14 @@ function checkUserSession() {
     
     document.getElementById('profile-info').innerText = `${savedName} (${getRoleBadge(savedRole)})`;
     
-    // Si el rol es TV / Streaming, activamos el tema limpio sin UI
+    // Activar estilo de Modo TV / Proyección
     if (savedRole === 'tv') {
       document.body.classList.add('mode-tv');
     } else {
       document.body.classList.remove('mode-tv');
     }
 
+    // Controles de metrónomo exclusivos para Baterista
     if (savedRole === 'baterista') {
       document.getElementById('metronome-controls').style.display = 'flex';
     } else {
@@ -114,17 +123,16 @@ function saveUserProfile() {
 
 function resetUserProfile() {
   if (confirm('¿Quieres cambiar tu perfil de DansingApp?')) {
-    // Recorremos las claves de LocalStorage y eliminamos SOLO las de DansingApp
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('dansing_')) {
         localStorage.removeItem(key);
       }
     });
-    
     location.reload();
   }
 }
-// RED P2P CON ID ÚNICO
+
+// CONEXIÓN P2P
 function autoConnectNetwork(name, role) {
   const roomCode = localStorage.getItem(STORAGE_ROOM_CODE) || 'ensayo';
   const myUniqueId = getUniqueUserId();
@@ -150,7 +158,6 @@ function connectToLeader(roomCode) {
   });
 }
 
-// VERIFICACIÓN DE LIVENESS DEL DIRECTOR ANTES DE TOMAR CONTROL
 function toggleDirector(isDirectorCheck) {
   const checkbox = document.getElementById('director-checkbox');
   const roomCode = localStorage.getItem(STORAGE_ROOM_CODE) || 'ensayo';
@@ -159,17 +166,18 @@ function toggleDirector(isDirectorCheck) {
   if (isDirectorCheck) {
     document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-orange)">🔍 Comprobando si hay Director activo...</span>`;
 
-    // Intentamos iniciar el rol de Director
     const leaderId = `${roomCode}-director`;
 
     initPeerNetwork(
       leaderId,
       () => {
-        log('👑 Modo Director ACTIVO. Eres el nuevo líder.');
+        log('👑 Modo Director ACTIVO.');
         document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-green)">👑 Director Activo (${savedName})</span>`;
         document.getElementById('director-catalog-card').style.display = 'block';
         
         sendP2PData({ type: 'DIRECTOR_ANNOUNCE', name: savedName });
+        
+        renderSetlistUI();
         renderCatalog();
       },
       (err) => {
@@ -177,6 +185,7 @@ function toggleDirector(isDirectorCheck) {
           alert(`❌ Hay un Director activo respondiendo en el ensayo.`);
           checkbox.checked = false;
           document.getElementById('director-catalog-card').style.display = 'none';
+          renderSetlistUI();
         }
       },
       handleIncomingP2PData
@@ -186,11 +195,12 @@ function toggleDirector(isDirectorCheck) {
     document.getElementById('director-catalog-card').style.display = 'none';
     document.getElementById('director-panel').style.display = 'none';
     showWaitingScreen();
+    renderSetlistUI();
     autoConnectNetwork(savedName, localStorage.getItem(STORAGE_USER_ROLE));
   }
 }
 
-// AVISO POP EN MODO TV AL CONECTAR AL DIRECTOR
+// POP DISCRETO AL CONECTAR EN MODO TV
 function triggerTvConnectPop(directorName) {
   const role = localStorage.getItem(STORAGE_USER_ROLE);
   if (role !== 'tv') return;
@@ -207,10 +217,10 @@ function triggerTvConnectPop(directorName) {
 
   setTimeout(() => {
     pop.classList.remove('show-pop');
-  }, 1500); // Se oculta a los 1.5 segundos
+  }, 1500);
 }
 
-// RECEPCIÓN DE DATOS Y CONEXIÓN
+// MANEJO DE RECEPCIÓN DE DATOS P2P
 function handleIncomingP2PData(data) {
   if (!data) return;
 
@@ -221,7 +231,6 @@ function handleIncomingP2PData(data) {
     const switchCard = document.getElementById('director-switch-card');
     if (switchCard && !isDirector) switchCard.style.display = 'none';
 
-    // Disparar animación pop si es modo TV
     triggerTvConnectPop(data.name);
   }
 
@@ -248,9 +257,7 @@ function handleIncomingP2PData(data) {
     globalSemitones = data.semitones || 0;
     if (!isDecoupled) localSemitones = globalSemitones;
 
-    document.getElementById('waiting-screen').style.display = 'none';
-    document.getElementById('song-card').style.display = 'block';
-    
+    showSongScreen();
     renderCurrentSong();
 
     if (data.setlist) {
@@ -289,7 +296,7 @@ function handleIncomingP2PData(data) {
 
   if (data.type === 'QUICK_ALERT') {
     const role = localStorage.getItem(STORAGE_USER_ROLE);
-    if (role !== 'tv') showToastAlert(data.message); // En modo TV no salen los toasts para no ensuciar la pantalla
+    if (role !== 'tv') showToastAlert(data.message);
   }
 
   if (data.type === 'START_COUNTDOWN') {
@@ -319,7 +326,6 @@ function handleIncomingP2PData(data) {
   if (data.type === 'STOP_SONG') {
     stopMetronomeVisual();
     
-    // Al finalizar la canción en Modo TV, vuelve a la pantalla standby elegante
     const role = localStorage.getItem(STORAGE_USER_ROLE);
     if (role === 'tv') {
       showWaitingScreen();
@@ -338,7 +344,7 @@ function handleIncomingP2PData(data) {
   }
 }
 
-// METRÓNOMO CONTROL EXCLUSIVO
+// METRÓNOMO EXCLUSIVO DE BATERISTA
 function adjustBpm(delta) {
   if (localStorage.getItem(STORAGE_USER_ROLE) !== 'baterista') return;
 
@@ -435,7 +441,7 @@ function getSavedBpmForSong(songId) {
   return saved[songId] !== undefined ? saved[songId] : null;
 }
 
-// SETLIST PERSISTENCIA Y PANEL
+// SETLIST PERSISTENCIA
 function toggleCatalogVisibility() {
   const wrapper = document.getElementById('catalog-foldable-wrapper');
   if (!wrapper) return;
@@ -497,7 +503,7 @@ function renderSetlistUI() {
   container.innerHTML = html;
 }
 
-// REPERTORIO
+// CATÁLOGO DE CANCIONES
 function renderCatalog(filter = "") {
   const container = document.getElementById('catalog-list');
   if (!container) return;
@@ -553,8 +559,7 @@ function directorSelectSong(songId) {
     stopMetronomeVisual();
   }
 
-  document.getElementById('waiting-screen').style.display = 'none';
-  document.getElementById('song-card').style.display = 'block';
+  showSongScreen();
   document.getElementById('director-panel').style.display = 'block';
 
   renderCurrentSong();
@@ -571,7 +576,7 @@ function directorSelectSong(songId) {
   log(`📢 Canción transmitida: ${currentSong.title}`);
 }
 
-// RENDERIZADO DE CANCIÓN CON SOPORTE DE PROYECCIÓN TV
+// RENDERIZADO DE CANCIÓN
 function renderCurrentSong() {
   if (!currentSong) return;
 
@@ -601,7 +606,7 @@ function renderCurrentSong() {
       sections.push({ name, id: secId });
 
       if (role === 'tv') {
-        if (isInsideBlock) html += `</div>`; // Cerrar bloque anterior
+        if (isInsideBlock) html += `</div>`;
         currentBlockId = secId;
         html += `<div class="tv-section-block" id="tv-sec-${secId}">`;
         isInsideBlock = true;
@@ -620,21 +625,19 @@ function renderCurrentSong() {
   });
 
   if (role === 'tv' && isInsideBlock) {
-    html += `</div>`; // Cerrar último bloque
+    html += `</div>`;
   }
 
   viewer.innerHTML = html;
   buildDirectorControls(sections);
   updateKeyControlsUI(semitonesToUse);
 
-  // Si estamos en modo TV y hay una sección activa seleccionada previamente
   if (role === 'tv') {
     const targetSection = currentSectionId || (sections.length > 0 ? sections[0].id : 'verso1');
     showTvSectionOnly(targetSection);
   }
 }
 
-// MOSTRAR ÚNICAMENTE LA SECCIÓN ACTIVA EN PANTALLA TV
 function showTvSectionOnly(secId) {
   document.querySelectorAll('.tv-section-block').forEach(el => {
     el.classList.remove('active-tv-section');
@@ -642,7 +645,6 @@ function showTvSectionOnly(secId) {
 
   let targetBlock = document.getElementById(`tv-sec-${secId}`);
   if (!targetBlock) {
-    // Si la intro está vacía, intentamos mostrar verso 1 por defecto
     const firstBlock = document.querySelector('.tv-section-block');
     if (firstBlock) firstBlock.classList.add('active-tv-section');
   } else {
@@ -650,24 +652,20 @@ function showTvSectionOnly(secId) {
   }
 }
 
-// SCROLL INTELIGENTE CON COMPENSACIÓN PARA METRÓNOMO STICKY
 function triggerJump(secId) {
   currentSectionId = secId;
   highlightAndScrollSection(secId);
   sendP2PData({ type: 'JUMP', target: secId });
 }
 
-// SALTO DE SECCIÓN CON MANEJO DE MODO TV
 function highlightAndScrollSection(secId) {
   const role = localStorage.getItem(STORAGE_USER_ROLE);
 
-  // SI ES MODO TV: Cambiamos de diapositiva en pantalla sin hacer scroll
   if (role === 'tv') {
     showTvSectionOnly(secId);
     return;
   }
 
-  // MODO MÚSICOS Y DIRECTOR: Scroll normal
   const targetEl = document.getElementById(`sec-${secId}`);
   if (!targetEl) return;
 
@@ -923,7 +921,7 @@ function extractIntroContent(content, role, semitones) {
     }
   }
 
-  if (role === 'voces') {
+  if (role === 'voces' || role === 'tv') {
     return firstLyric || "Preparados para cantar...";
   } else {
     if (introChords) {
