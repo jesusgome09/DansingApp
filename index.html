@@ -11,7 +11,7 @@
 </head>
 <body>
 
-  <!-- MODAL REGISTRO -->
+  <!-- MODAL REGISTRO DE PERFIL -->
   <div id="modal-onboarding" class="modal-overlay">
     <div class="card modal-card">
       <div class="app-header" style="margin-bottom: 10px;">
@@ -24,28 +24,29 @@
 
       <div class="input-group">
         <label class="input-label">Tu Nombre:</label>
-        <input type="text" id="setup-name" placeholder="Ej: Pedro, Carlos">
+        <input type="text" id="setup-name" placeholder="Ej: Pedro, Juan, María">
       </div>
 
       <div class="input-group">
-        <label class="input-label">Tu Rol:</label>
+        <label class="input-label">Tu Cargo en la Banda:</label>
         <select id="setup-role">
-          <option value="instrumentista">🎸 Instrumentista (Ver Acordes)</option>
-          <option value="cantante">🎤 Cantante (Solo Letras)</option>
+          <option value="voces">🎤 Cantante / Voces (Solo Letras)</option>
+          <option value="pianista">🎹 Pianista (Letra + Acordes)</option>
+          <option value="guitarrista">🎸 Guitarrista (Letra + Acordes)</option>
+          <option value="bajista">🎸 Bajista (Letra + Acordes)</option>
+          <option value="baterista">🥁 Baterista (Letra + Metrónomo Maestro)</option>
         </select>
       </div>
 
-      <button class="btn btn-cyan" style="margin-top: 15px;" onclick="saveUserProfile()">Entrar 🚀</button>
+      <button class="btn btn-cyan" style="margin-top: 15px;" onclick="saveUserProfile()">Entrar a la App 🚀</button>
     </div>
   </div>
 
-<!-- OVERLAY DE CUENTA REGRESIVA CON INFO DE CANCIÓN -->
+  <!-- OVERLAY DE CUENTA REGRESIVA -->
   <div id="countdown-overlay">
     <div id="countdown-song-info">Nombre de la Canción</div>
     <div id="countdown-key-info">Tono: G</div>
-    
     <div id="countdown-number">3</div>
-
     <div id="countdown-intro-box">
       <div id="countdown-intro-label">Acordes de la Intro:</div>
       <div id="countdown-intro-content">G - D/F# - Em - C</div>
@@ -59,20 +60,38 @@
       <h1>DansingApp</h1>
     </header>
 
-    <!-- BARRA PERFIL -->
+    <!-- BARRA PERFIL Y CONTROLES DE FUENTE -->
     <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px;">
       <div>
         <div id="profile-info" style="font-weight: bold; font-size: 0.95rem;"></div>
         <div id="net-status" style="font-size: 0.8rem; margin-top: 2px;">Conectando...</div>
       </div>
-      <button class="btn btn-sec" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="resetUserProfile()">⚙️ Perfil</button>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="btn btn-sec" style="width: auto; padding: 6px 10px; font-weight: bold;" onclick="changeFontSize(-1)">A-</button>
+        <button class="btn btn-sec" style="width: auto; padding: 6px 10px; font-weight: bold;" onclick="changeFontSize(1)">A+</button>
+        <button class="btn btn-sec" style="width: auto; padding: 6px 10px; font-size: 0.75rem;" onclick="resetUserProfile()">⚙️ Perfil</button>
+      </div>
+    </div>
+
+    <!-- METRÓNOMO BARRA DE ESTADO -->
+    <div class="card" id="metronome-card" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; background: #121420;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div id="metronome-light" class="metro-light"></div>
+        <span id="metronome-bpm-display" style="font-weight: bold; color: var(--accent-cyan); font-size: 0.95rem;">BPM: 120</span>
+      </div>
+      <div id="metronome-controls" style="display: none; gap: 4px; align-items: center;">
+        <button class="btn btn-sec" style="width:auto; padding: 4px 8px; font-weight:bold;" onclick="adjustBpm(-1)">-1</button>
+        <input type="number" id="bpm-input" value="120" min="40" max="240" onchange="manualBpmInput(this.value)" style="width: 55px; margin: 0; padding: 4px; text-align: center; font-weight: bold;">
+        <button class="btn btn-sec" style="width:auto; padding: 4px 8px; font-weight:bold;" onclick="adjustBpm(1)">+1</button>
+        <button id="btn-toggle-metro" class="btn btn-cyan" style="width:auto; padding: 4px 10px;" onclick="toggleMetronome()">▶ Play</button>
+      </div>
     </div>
 
     <!-- BOTONES DE AVISO RÁPIDO PARA MÚSICOS -->
     <div class="musician-alerts-bar">
       <button class="btn-musician-alert" onclick="sendMusicianAlert('✋ ¡ESPEREN!')">✋ ¡Esperen!</button>
       <button class="btn-musician-alert" onclick="sendMusicianAlert('👍 ¡LISTO!')">👍 ¡Listo!</button>
-      <button class="btn-musician-alert" onclick="sendMusicianAlert('Vamos a Orar')">🙌 Orar</button>
+      <button class="btn-musician-alert" onclick="sendMusicianAlert('🙌 Vamos a Orar')">🙌 Orar</button>
       <button class="btn-musician-alert" onclick="sendMusicianAlert('🥢 BAQUETA CAÍDA')">🥢 Baqueta Caída</button>
     </div>
 
@@ -83,10 +102,24 @@
       </label>
     </div>
 
-    <!-- CATALOGO DE REPERTORIO (SOLO DIRECTOR) -->
-    <div class="card" id="director-catalog-card" style="display: none;">
-      <div class="card-title" style="color: var(--accent-cyan);">📚 Seleccionar Canción del Repertorio</div>
-      <div id="catalog-list"></div>
+    <!-- CONTROLES DEL DIRECTOR: SETLIST COMPACTO + DESPLEGABLE -->
+    <div class="card" id="director-catalog-card" style="display: none; padding: 14px;">
+      
+      <!-- SETLIST DEL DOMINGO COMPACTO -->
+      <div style="background: #0a0b12; padding: 10px; border-radius: 8px; border: 1px dashed var(--accent-orange); margin-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 0.8rem; font-weight: bold; color: var(--accent-orange);">📋 SETLIST DEL DOMINGO</span>
+          <button class="btn btn-sec" style="width: auto; padding: 4px 8px; font-size: 0.75rem;" onclick="toggleCatalogVisibility()">📂 Añadir Canciones</button>
+        </div>
+        <div id="setlist-items" style="font-size: 0.85rem; color: #ccc;">No hay canciones seleccionadas. Toca "Añadir Canciones".</div>
+      </div>
+
+      <!-- CATÁLOGO PLEGABLE (SE OCULTA PARA NO OCUPAR ESPACIO) -->
+      <div id="catalog-foldable-wrapper" style="display: none; border-top: 1px solid #222; padding-top: 10px;">
+        <input type="text" id="catalog-search" placeholder="🔍 Buscar canción..." oninput="filterCatalog()" style="margin-bottom: 10px; padding: 8px 10px;">
+        <div id="catalog-list"></div>
+      </div>
+
     </div>
 
     <!-- PANTALLA EN ESPERA DEL DIRECTOR -->
@@ -94,7 +127,7 @@
       <div style="font-size: 3rem; margin-bottom: 10px;">⏳</div>
       <h3 style="color: var(--accent-cyan); margin-bottom: 8px;">En espera del Director...</h3>
       <p style="color: var(--text-muted); font-size: 0.9rem;">
-        La pantalla cargará automáticamente en cuanto el Director seleccione una canción del repertorio.
+        La pantalla cargará automáticamente en cuanto el Director seleccione una canción.
       </p>
     </div>
 
@@ -106,7 +139,6 @@
 
     <!-- VISOR DE CANCIÓN Y CONTROLES DE TONO -->
     <div class="card" id="song-card" style="display: none;">
-      
       <div style="display: flex; justify-content: space-between; align-items: center; background: #0c0d14; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
         <div style="display: flex; gap: 5px;">
           <button class="btn btn-sec" style="width:auto; padding:6px 12px;" onclick="changeKey(-1)">-1 Tono</button>
@@ -120,7 +152,7 @@
       <div id="song-viewer"></div>
     </div>
 
-    <!-- CONSOLA -->
+    <!-- CONSOLA DE REGISTRO -->
     <div class="card">
       <div class="card-title" style="color: var(--text-muted);">Consola de Registro</div>
       <div id="console-log"></div>
@@ -129,6 +161,20 @@
 
   <!-- AVISO EMERGENTE -->
   <div id="quick-toast"></div>
+
+  <!-- CHAT FLOTANTE -->
+  <button id="chat-toggle-btn" onclick="toggleChatPanel()">💬</button>
+  <div id="chat-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 6px;">
+      <strong style="color: var(--accent-cyan); font-size: 0.9rem;">💬 Chat de Banda</strong>
+      <span style="cursor: pointer; font-weight: bold; font-size: 0.9rem;" onclick="toggleChatPanel()">✕</span>
+    </div>
+    <div id="chat-messages"></div>
+    <div style="display: flex; gap: 4px; margin-top: 6px;">
+      <input type="text" id="chat-input" placeholder="Escribe un mensaje..." style="margin: 0; padding: 8px; font-size: 0.85rem;" onkeypress="if(event.key==='Enter') sendChatMessage()">
+      <button class="btn btn-cyan" style="width: auto; padding: 8px 12px;" onclick="sendChatMessage()">Enviar</button>
+    </div>
+  </div>
 
   <script src="js/songs.js"></script>
   <script src="js/p2p.js"></script>

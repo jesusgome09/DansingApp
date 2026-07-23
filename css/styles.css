@@ -241,3 +241,75 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   white-space: nowrap;
 }
 .btn-musician-alert:active { transform: scale(0.95); }
+
+/* LUZ DEL METRÓNOMO */
+.metro-light {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #333;
+  transition: background 0.1s;
+}
+.metro-light.flash {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-cyan);
+}
+
+/* BOTÓN FLOTANTE Y PANEL DE CHAT (ESQUINA INFERIOR DERECHA) */
+#chat-toggle-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-cyan), #4facfe);
+  color: #000;
+  border: none;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 15px rgba(0,242,254,0.4);
+  cursor: pointer;
+  z-index: 1500;
+  transition: transform 0.2s;
+}
+#chat-toggle-btn:active { transform: scale(0.9); }
+
+#chat-panel {
+  position: fixed;
+  bottom: 85px;
+  right: 20px;
+  width: 310px;
+  height: 380px;
+  background: rgba(22, 24, 36, 0.96);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 14px;
+  padding: 12px;
+  display: none;
+  flex-direction: column;
+  z-index: 1500;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+}
+
+#chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.chat-msg {
+  background: #121420;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #26293b;
+}
+.chat-msg-author {
+  font-weight: bold;
+  color: var(--accent-orange);
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}

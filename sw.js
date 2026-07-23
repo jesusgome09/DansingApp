@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dansingapp-v1';
+const CACHE_NAME = 'dansingapp-v2';
 const ASSETS = [
   './',
   './index.html',
