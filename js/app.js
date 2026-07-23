@@ -19,6 +19,14 @@ let metronomeInterval = null;
 // TAMAÑO DE FUENTE
 let currentFontSize = 1.15;
 
+// DECLARACIÓN PREVIA DE VISTAS PARA EVITAR "ReferenceError"
+function showWaitingScreen() {
+  const waitingEl = document.getElementById('waiting-screen');
+  const songCardEl = document.getElementById('song-card');
+  if (waitingEl) waitingEl.style.display = 'block';
+  if (songCardEl) songCardEl.style.display = 'none';
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   checkUserSession();
 });
