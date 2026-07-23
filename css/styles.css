@@ -326,3 +326,62 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
   border-bottom: 1px solid var(--accent-cyan);
 }
+/* MODO PANTALLA TV / STREAMING EN TIEMPO REAL */
+body.mode-tv {
+  background-color: #000000 !important;
+  color: #ffffff;
+}
+
+body.mode-tv header,
+body.mode-tv .musician-alerts-bar,
+body.mode-tv #metronome-card,
+body.mode-tv #director-switch-card,
+body.mode-tv #director-catalog-card,
+body.mode-tv #director-panel,
+body.mode-tv #chat-toggle-btn,
+body.mode-tv #chat-panel,
+body.mode-tv .card:has(#console-log),
+body.mode-tv #quick-toast {
+  display: none !important; /* Oculta todo menú, chat o alerta de la pantalla principal */
+}
+
+body.mode-tv #song-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+body.mode-tv #song-card > div:first-child {
+  display: none !important; /* Oculta barra de transposición y acople */
+}
+
+body.mode-tv #song-title {
+  font-size: 2rem;
+  color: var(--accent-cyan);
+  text-align: center;
+  margin-bottom: 25px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+body.mode-tv #song-viewer {
+  font-size: 2.2rem !important; /* Letra gigante para proyección */
+  text-align: center;
+  line-height: 1.8;
+  font-weight: 700;
+  max-width: 90%;
+  margin: 0 auto;
+}
+
+body.mode-tv .section-header {
+  font-size: 1.8rem;
+  color: var(--accent-orange);
+  margin-top: 35px;
+  margin-bottom: 15px;
+  border-bottom: 2px solid var(--accent-orange);
+  display: inline-block;
+  padding: 4px 20px;
+  border-radius: 20px;
+  background: rgba(255, 152, 0, 0.1);
+}

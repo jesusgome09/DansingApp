@@ -66,6 +66,13 @@ function checkUserSession() {
     
     document.getElementById('profile-info').innerText = `${savedName} (${getRoleBadge(savedRole)})`;
     
+    // Si el rol es TV / Streaming, activamos el tema limpio sin UI
+    if (savedRole === 'tv') {
+      document.body.classList.add('mode-tv');
+    } else {
+      document.body.classList.remove('mode-tv');
+    }
+
     if (savedRole === 'baterista') {
       document.getElementById('metronome-controls').style.display = 'flex';
     } else {
@@ -84,7 +91,8 @@ function getRoleBadge(role) {
     'pianista': '🎹 Pianista',
     'guitarrista': '🎸 Guitarrista',
     'bajista': '🎸 Bajista',
-    'baterista': '🥁 Baterista'
+    'baterista': '🥁 Baterista',
+    'tv': '🖥️ Pantalla TV / Stream'
   };
   return map[role] || role;
 }
@@ -545,7 +553,7 @@ function renderCurrentSong() {
   let html = '';
   const sections = [];
 
-  lines.forEach((line) => {
+ lines.forEach((line) => {
     const trimmed = line.trim();
     if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
       const name = trimmed.replace('[', '').replace(']', '');
@@ -553,7 +561,7 @@ function renderCurrentSong() {
       sections.push({ name, id: secId });
       html += `<span class="section-header" id="sec-${secId}">${trimmed}</span>`;
     } else if (esLineaAcordes(line)) {
-      if (role !== 'voces') {
+      if (role !== 'voces' && role !== 'tv') { // Si es TV o Voces, NO muestra acordes
         html += `<span class="chord">${line}</span>\n`;
       }
     } else {
