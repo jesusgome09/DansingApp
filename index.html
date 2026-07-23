@@ -87,16 +87,15 @@
       </div>
     </div>
 
-    <!-- BOTONES DE AVISO RÁPIDO PARA MÚSICOS -->
-    <div class="musician-alerts-bar">
-      <button class="btn-musician-alert" onclick="sendMusicianAlert('✋ ¡ESPEREN!')">✋ ¡Esperen!</button>
-      <button class="btn-musician-alert" onclick="sendMusicianAlert('👍 ¡LISTO!')">👍 ¡Listo!</button>
-      <button class="btn-musician-alert" onclick="sendMusicianAlert('🙌 Vamos a Orar')">🙌 Orar</button>
-      <button class="btn-musician-alert" onclick="sendMusicianAlert('🥢 BAQUETA CAÍDA')">🥢 Baqueta Caída</button>
+<!-- BOTONES DE AVISO RÁPIDO PARA MÚSICOS (SOLO 3 BOTONES EXACTOS) -->
+    <div class="musician-alerts-bar" style="display: flex; justify-content: space-between; gap: 6px;">
+      <button class="btn-musician-alert" style="flex: 1;" onclick="sendMusicianAlert('✋ ¡ESPEREN!')">✋ ¡Esperen!</button>
+      <button class="btn-musician-alert" style="flex: 1;" onclick="sendMusicianAlert('👍 ¡LISTO!')">👍 ¡Listo!</button>
+      <button class="btn-musician-alert" style="flex: 1;" onclick="sendMusicianAlert('🙌 Vamos a Orar')">🙌 Orar</button>
     </div>
 
-    <!-- SWITCH MODO DIRECTOR -->
-    <div class="card" style="padding: 12px 18px;">
+    <!-- SWITCH MODO DIRECTOR (OCULTABLE SI YA HAY DIRECTOR ACTIVO) -->
+    <div class="card" id="director-switch-card" style="padding: 12px 18px;">
       <label style="font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
         <input type="checkbox" id="director-checkbox" onchange="toggleDirector(this.checked)"> 👑 Tomar Control como Director
       </label>

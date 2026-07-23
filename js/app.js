@@ -170,11 +170,17 @@ function toggleDirector(isDirectorCheck) {
   }
 }
 
-// RECEPCIÓN DE DATOS TRAP
+// MANEJO DE RECEPCIÓN DE DATOS EN TRAP
 function handleIncomingP2PData(data) {
   if (!data) return;
 
   const isDirector = document.getElementById('director-checkbox')?.checked;
+
+  // Si ya nos conectamos con el Director y NO somos Director, ocultamos la opción de "Tomar Control"
+  const switchCard = document.getElementById('director-switch-card');
+  if (switchCard && !isDirector) {
+    switchCard.style.display = 'none';
+  }
 
   if (data.type === 'GET_CURRENT_STATE' && isDirector) {
     if (currentSong) {
@@ -238,8 +244,10 @@ function handleIncomingP2PData(data) {
     runCountdownAnimation();
   }
 
+  // MENSAJE DE CHAT: SE GUARDA Y SE MUESTRA COMO AVISO EMERGENTE EN PANTALLA
   if (data.type === 'CHAT_MSG') {
     appendChatMessage(data.author, data.text);
+    showToastAlert(`💬 ${data.author.toUpperCase()}: ${data.text}`);
   }
 
   if (data.type === 'UPDATE_METRONOME') {
@@ -632,6 +640,7 @@ function toggleChatPanel() {
   panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
 }
 
+// ENVIAR CHAT
 function sendChatMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
@@ -639,6 +648,9 @@ function sendChatMessage() {
 
   const savedName = localStorage.getItem(STORAGE_USER_NAME) || 'Músico';
   appendChatMessage(savedName, text);
+
+  // También nos muestra la alerta a nosotros
+  showToastAlert(`💬 ${savedName.toUpperCase()}: ${text}`);
 
   sendP2PData({ type: 'CHAT_MSG', author: savedName, text: text });
   input.value = '';

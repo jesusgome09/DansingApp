@@ -313,3 +313,11 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   font-size: 0.75rem;
   margin-bottom: 2px;
 }
+/* METRÓNOMO FIJO AL HACER SCROLL (STICKY TOP) */
+#metronome-card {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  border-bottom: 1px solid var(--accent-cyan);
+}
