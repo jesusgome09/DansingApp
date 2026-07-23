@@ -190,7 +190,27 @@ function toggleDirector(isDirectorCheck) {
   }
 }
 
-// RECEPCIÓN DE DATOS TRAP
+// AVISO POP EN MODO TV AL CONECTAR AL DIRECTOR
+function triggerTvConnectPop(directorName) {
+  const role = localStorage.getItem(STORAGE_USER_ROLE);
+  if (role !== 'tv') return;
+
+  let pop = document.getElementById('tv-connect-pop');
+  if (!pop) {
+    pop = document.createElement('div');
+    pop.id = 'tv-connect-pop';
+    document.body.appendChild(pop);
+  }
+
+  pop.innerText = `✨ Director Conectado (${directorName})`;
+  pop.classList.add('show-pop');
+
+  setTimeout(() => {
+    pop.classList.remove('show-pop');
+  }, 1500); // Se oculta a los 1.5 segundos
+}
+
+// RECEPCIÓN DE DATOS Y CONEXIÓN
 function handleIncomingP2PData(data) {
   if (!data) return;
 
@@ -200,6 +220,9 @@ function handleIncomingP2PData(data) {
     document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-green)">👑 Director: ${data.name}</span>`;
     const switchCard = document.getElementById('director-switch-card');
     if (switchCard && !isDirector) switchCard.style.display = 'none';
+
+    // Disparar animación pop si es modo TV
+    triggerTvConnectPop(data.name);
   }
 
   if (data.type === 'GET_CURRENT_STATE' && isDirector) {
@@ -265,7 +288,8 @@ function handleIncomingP2PData(data) {
   }
 
   if (data.type === 'QUICK_ALERT') {
-    showToastAlert(data.message);
+    const role = localStorage.getItem(STORAGE_USER_ROLE);
+    if (role !== 'tv') showToastAlert(data.message); // En modo TV no salen los toasts para no ensuciar la pantalla
   }
 
   if (data.type === 'START_COUNTDOWN') {
@@ -273,8 +297,11 @@ function handleIncomingP2PData(data) {
   }
 
   if (data.type === 'CHAT_MSG') {
-    appendChatMessage(data.author, data.text);
-    showToastAlert(`💬 ${data.author.toUpperCase()}: ${data.text}`);
+    const role = localStorage.getItem(STORAGE_USER_ROLE);
+    if (role !== 'tv') {
+      appendChatMessage(data.author, data.text);
+      showToastAlert(`💬 ${data.author.toUpperCase()}: ${data.text}`);
+    }
   }
 
   if (data.type === 'UPDATE_METRONOME') {
@@ -291,8 +318,16 @@ function handleIncomingP2PData(data) {
 
   if (data.type === 'STOP_SONG') {
     stopMetronomeVisual();
-    const btnCD = document.getElementById('btn-start-countdown');
-    if (btnCD) btnCD.style.display = 'block';
+    
+    // Al finalizar la canción en Modo TV, vuelve a la pantalla standby elegante
+    const role = localStorage.getItem(STORAGE_USER_ROLE);
+    if (role === 'tv') {
+      showWaitingScreen();
+    } else {
+      const btnCD = document.getElementById('btn-start-countdown');
+      if (btnCD) btnCD.style.display = 'block';
+    }
+
     log('🛑 La canción ha finalizado.');
   }
 
@@ -536,6 +571,7 @@ function directorSelectSong(songId) {
   log(`📢 Canción transmitida: ${currentSong.title}`);
 }
 
+// RENDERIZADO DE CANCIÓN CON SOPORTE DE PROYECCIÓN TV
 function renderCurrentSong() {
   if (!currentSong) return;
 
@@ -545,33 +581,73 @@ function renderCurrentSong() {
   document.getElementById('song-title').innerText = `${currentSong.title} - ${currentSong.artist}`;
   
   const transposedContent = transponerTextoCancion(currentSong.content, semitonesToUse);
-
   const viewer = document.getElementById('song-viewer');
-  viewer.style.fontSize = `${currentFontSize}rem`;
+  
+  if (role !== 'tv') {
+    viewer.style.fontSize = `${currentFontSize}rem`;
+  }
 
   const lines = transposedContent.split('\n');
   let html = '';
   const sections = [];
+  let currentBlockId = 'intro';
+  let isInsideBlock = false;
 
- lines.forEach((line) => {
+  lines.forEach((line) => {
     const trimmed = line.trim();
     if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
       const name = trimmed.replace('[', '').replace(']', '');
       const secId = name.toLowerCase().replace(/\s+/g, '');
       sections.push({ name, id: secId });
-      html += `<span class="section-header" id="sec-${secId}">${trimmed}</span>`;
+
+      if (role === 'tv') {
+        if (isInsideBlock) html += `</div>`; // Cerrar bloque anterior
+        currentBlockId = secId;
+        html += `<div class="tv-section-block" id="tv-sec-${secId}">`;
+        isInsideBlock = true;
+      } else {
+        html += `<span class="section-header" id="sec-${secId}">${trimmed}</span>`;
+      }
     } else if (esLineaAcordes(line)) {
-      if (role !== 'voces' && role !== 'tv') { // Si es TV o Voces, NO muestra acordes
+      if (role !== 'voces' && role !== 'tv') {
         html += `<span class="chord">${line}</span>\n`;
       }
     } else {
-      html += `${line}\n`;
+      if (trimmed.length > 0) {
+        html += `${line}\n`;
+      }
     }
   });
+
+  if (role === 'tv' && isInsideBlock) {
+    html += `</div>`; // Cerrar último bloque
+  }
 
   viewer.innerHTML = html;
   buildDirectorControls(sections);
   updateKeyControlsUI(semitonesToUse);
+
+  // Si estamos en modo TV y hay una sección activa seleccionada previamente
+  if (role === 'tv') {
+    const targetSection = currentSectionId || (sections.length > 0 ? sections[0].id : 'verso1');
+    showTvSectionOnly(targetSection);
+  }
+}
+
+// MOSTRAR ÚNICAMENTE LA SECCIÓN ACTIVA EN PANTALLA TV
+function showTvSectionOnly(secId) {
+  document.querySelectorAll('.tv-section-block').forEach(el => {
+    el.classList.remove('active-tv-section');
+  });
+
+  let targetBlock = document.getElementById(`tv-sec-${secId}`);
+  if (!targetBlock) {
+    // Si la intro está vacía, intentamos mostrar verso 1 por defecto
+    const firstBlock = document.querySelector('.tv-section-block');
+    if (firstBlock) firstBlock.classList.add('active-tv-section');
+  } else {
+    targetBlock.classList.add('active-tv-section');
+  }
 }
 
 // SCROLL INTELIGENTE CON COMPENSACIÓN PARA METRÓNOMO STICKY
@@ -581,7 +657,17 @@ function triggerJump(secId) {
   sendP2PData({ type: 'JUMP', target: secId });
 }
 
+// SALTO DE SECCIÓN CON MANEJO DE MODO TV
 function highlightAndScrollSection(secId) {
+  const role = localStorage.getItem(STORAGE_USER_ROLE);
+
+  // SI ES MODO TV: Cambiamos de diapositiva en pantalla sin hacer scroll
+  if (role === 'tv') {
+    showTvSectionOnly(secId);
+    return;
+  }
+
+  // MODO MÚSICOS Y DIRECTOR: Scroll normal
   const targetEl = document.getElementById(`sec-${secId}`);
   if (!targetEl) return;
 
@@ -589,11 +675,9 @@ function highlightAndScrollSection(secId) {
   const directorPanel = document.getElementById('director-panel');
   const metronomeCard = document.getElementById('metronome-card');
 
-  // Calculamos alto de la barra sticky del metrónomo
   let metroHeight = metronomeCard ? metronomeCard.offsetHeight : 0;
   let offsetMargin = metroHeight + 15;
 
-  // Si es Director, sumamos también la altura de su panel de botones
   if (isDirector && directorPanel && directorPanel.style.display !== 'none') {
     offsetMargin += directorPanel.offsetHeight + 10;
   }

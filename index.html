@@ -122,13 +122,21 @@
 
     </div>
 
-    <!-- PANTALLA EN ESPERA DEL DIRECTOR -->
-    <div class="card" id="waiting-screen" style="text-align: center; padding: 40px 20px;">
-      <div style="font-size: 3rem; margin-bottom: 10px;">⏳</div>
-      <h3 style="color: var(--accent-cyan); margin-bottom: 8px;">En espera del Director...</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem;">
-        La pantalla cargará automáticamente en cuanto el Director seleccione una canción.
-      </p>
+<!-- PANTALLA EN ESPERA DEL DIRECTOR / MODAL DE ESPERA -->
+    <div class="card" id="waiting-screen">
+      <!-- MODO NORMAL APP -->
+      <div id="waiting-app-view" style="text-align: center; padding: 40px 20px;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">⏳</div>
+        <h3 style="color: var(--accent-cyan); margin-bottom: 8px;">En espera del Director...</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          La pantalla cargará automáticamente en cuanto el Director seleccione una canción.
+        </p>
+      </div>
+
+      <!-- MODO TV / STANDBY TEMPLO -->
+      <div id="waiting-tv-view" style="display: none;">
+        <h1 class="tv-standby-title">TIEMPO DE ADORACIÓN Y ALABANZA</h1>
+      </div>
     </div>
 
     <!-- PANEL FLOTANTE SALTOS (DIRECTOR) -->

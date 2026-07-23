@@ -326,12 +326,15 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
   border-bottom: 1px solid var(--accent-cyan);
 }
-/* MODO PANTALLA TV / STREAMING EN TIEMPO REAL */
+
+/* MODO PROYECCIÓN TV / STREAMING ULTRA-CLEAN */
 body.mode-tv {
   background-color: #000000 !important;
   color: #ffffff;
+  overflow: hidden; /* Evita barras de scroll en la TV */
 }
 
+/* Ocultar barra superior y tarjetas */
 body.mode-tv header,
 body.mode-tv .musician-alerts-bar,
 body.mode-tv #metronome-card,
@@ -341,47 +344,182 @@ body.mode-tv #director-panel,
 body.mode-tv #chat-toggle-btn,
 body.mode-tv #chat-panel,
 body.mode-tv .card:has(#console-log),
-body.mode-tv #quick-toast {
-  display: none !important; /* Oculta todo menú, chat o alerta de la pantalla principal */
+body.mode-tv #quick-toast,
+body.mode-tv #profile-info,
+body.mode-tv #net-status,
+body.mode-tv .card button:not(:last-child) {
+  display: none !important;
 }
 
+/* Dejar solo la tuerquita de perfil ultra discreta en la esquina */
+body.mode-tv .card:has(#profile-info) {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  z-index: 9999;
+  opacity: 0.2;
+  transition: opacity 0.3s;
+}
+body.mode-tv .card:has(#profile-info):hover {
+  opacity: 1;
+}
+
+/* Tarjeta principal transparente y centrada en pantalla entera */
 body.mode-tv #song-card {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 body.mode-tv #song-card > div:first-child {
-  display: none !important; /* Oculta barra de transposición y acople */
+  display: none !important; /* Oculta barra de tonos */
 }
 
+/* Título de la canción discreto y elegante arriba */
 body.mode-tv #song-title {
-  font-size: 2rem;
+  position: absolute;
+  top: 30px;
+  font-size: 1.4rem;
   color: var(--accent-cyan);
   text-align: center;
-  margin-bottom: 25px;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  opacity: 0.7;
 }
 
+/* Visor de proyección */
 body.mode-tv #song-viewer {
-  font-size: 2.2rem !important; /* Letra gigante para proyección */
+  width: 90vw;
+  max-width: 1200px;
   text-align: center;
-  line-height: 1.8;
-  font-weight: 700;
-  max-width: 90%;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
+/* Ocultar etiquetas [Intro], [Verso 1], etc. */
 body.mode-tv .section-header {
-  font-size: 1.8rem;
-  color: var(--accent-orange);
-  margin-top: 35px;
-  margin-bottom: 15px;
-  border-bottom: 2px solid var(--accent-orange);
-  display: inline-block;
-  padding: 4px 20px;
-  border-radius: 20px;
-  background: rgba(255, 152, 0, 0.1);
+  display: none !important;
+}
+
+/* OCULTAR TODAS LAS SECCIONES QUE NO SEAN LA ACTIVA */
+body.mode-tv .tv-section-block {
+  display: none;
+  font-size: 3.2rem !important;
+  line-height: 1.6;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.9);
+  animation: fadeInTv 0.4s ease-in-out;
+}
+
+/* Mostrar únicamente el bloque activo */
+body.mode-tv .tv-section-block.active-tv-section {
+  display: block !important;
+}
+
+@keyframes fadeInTv {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* PANTALLA STANDBY PARA MODO TV CON IMAGEN HOLY */
+body.mode-tv #waiting-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: url('../img/fondo-holy.png') no-repeat center center / cover !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 100;
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+}
+
+body.mode-tv #waiting-app-view {
+  display: none !important;
+}
+
+body.mode-tv #waiting-tv-view {
+  display: flex !important;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.tv-standby-title {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #fff8e7;
+  text-align: center;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 4px 30px rgba(0, 0, 0, 0.9);
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  animation: pulseGold 3s infinite alternate ease-in-out;
+}
+
+@keyframes pulseGold {
+  from { opacity: 0.85; transform: scale(0.99); }
+  to { opacity: 1; transform: scale(1.02); }
+}
+
+/* POP-UP DISCRETO DE CONEXIÓN EN MODO TV (1 SEGUNDO) */
+#tv-connect-pop {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  background: rgba(18, 20, 32, 0.92);
+  border: 2px solid var(--accent-cyan);
+  color: #fff;
+  padding: 16px 32px;
+  border-radius: 30px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  box-shadow: 0 10px 30px rgba(0,242,254,0.4);
+  z-index: 99999;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#tv-connect-pop.show-pop {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* CUENTA REGRESIVA SIN ACORDES NI CAJAS TÉCNICAS EN MODO TV */
+body.mode-tv #countdown-overlay {
+  background: rgba(0, 0, 0, 0.95) !important;
+}
+
+body.mode-tv #countdown-key-info,
+body.mode-tv #countdown-intro-box {
+  display: none !important; /* Oculta tono y acordes de la intro en el proyector */
+}
+
+body.mode-tv #countdown-song-info {
+  font-size: 2.8rem !important;
+  color: var(--accent-cyan) !important;
+}
+
+body.mode-tv #countdown-number {
+  font-size: 8rem !important;
 }
