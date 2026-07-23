@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DansingApp</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/styles.css">
+  <meta name="theme-color" content="#0d0e15">
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+  <!-- MODAL REGISTRO -->
+  <div id="modal-onboarding" class="modal-overlay">
+    <div class="card modal-card">
+      <div class="app-header" style="margin-bottom: 10px;">
+        <img src="icon.svg" alt="DansingApp Logo">
+        <h1>DansingApp</h1>
+      </div>
+      <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
+        Configura tu perfil para el ensayo
+      </p>
+
+      <div class="input-group">
+        <label class="input-label">Tu Nombre:</label>
+        <input type="text" id="setup-name" placeholder="Ej: Pedro, Carlos">
+      </div>
+
+      <div class="input-group">
+        <label class="input-label">Tu Rol:</label>
+        <select id="setup-role">
+          <option value="instrumentista">🎸 Instrumentista (Ver Acordes)</option>
+          <option value="cantante">🎤 Cantante (Solo Letras)</option>
+        </select>
+      </div>
+
+      <button class="btn btn-cyan" style="margin-top: 15px;" onclick="saveUserProfile()">Entrar 🚀</button>
+    </div>
+  </div>
+
+<!-- OVERLAY DE CUENTA REGRESIVA CON INFO DE CANCIÓN -->
+  <div id="countdown-overlay">
+    <div id="countdown-song-info">Nombre de la Canción</div>
+    <div id="countdown-key-info">Tono: G</div>
+    
+    <div id="countdown-number">3</div>
+
+    <div id="countdown-intro-box">
+      <div id="countdown-intro-label">Acordes de la Intro:</div>
+      <div id="countdown-intro-content">G - D/F# - Em - C</div>
+    </div>
+  </div>
+
+  <!-- APP PRINCIPAL -->
+  <div id="app-content" style="display: none;">
+    <header class="app-header">
+      <img src="icon.svg" alt="DansingApp Logo">
+      <h1>DansingApp</h1>
+    </header>
+
+    <!-- BARRA PERFIL -->
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 18px;">
+      <div>
+        <div id="profile-info" style="font-weight: bold; font-size: 0.95rem;"></div>
+        <div id="net-status" style="font-size: 0.8rem; margin-top: 2px;">Conectando...</div>
+      </div>
+      <button class="btn btn-sec" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="resetUserProfile()">⚙️ Perfil</button>
+    </div>
+
+    <!-- BOTONES DE AVISO RÁPIDO PARA MÚSICOS -->
+    <div class="musician-alerts-bar">
+      <button class="btn-musician-alert" onclick="sendMusicianAlert('✋ ¡ESPEREN!')">✋ ¡Esperen!</button>
+      <button class="btn-musician-alert" onclick="sendMusicianAlert('👍 ¡LISTO!')">👍 ¡Listo!</button>
+      <button class="btn-musician-alert" onclick="sendMusicianAlert('Vamos a Orar')">🙌 Orar</button>
+      <button class="btn-musician-alert" onclick="sendMusicianAlert('🥢 BAQUETA CAÍDA')">🥢 Baqueta Caída</button>
+    </div>
+
+    <!-- SWITCH MODO DIRECTOR -->
+    <div class="card" style="padding: 12px 18px;">
+      <label style="font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+        <input type="checkbox" id="director-checkbox" onchange="toggleDirector(this.checked)"> 👑 Tomar Control como Director
+      </label>
+    </div>
+
+    <!-- CATALOGO DE REPERTORIO (SOLO DIRECTOR) -->
+    <div class="card" id="director-catalog-card" style="display: none;">
+      <div class="card-title" style="color: var(--accent-cyan);">📚 Seleccionar Canción del Repertorio</div>
+      <div id="catalog-list"></div>
+    </div>
+
+    <!-- PANTALLA EN ESPERA DEL DIRECTOR -->
+    <div class="card" id="waiting-screen" style="text-align: center; padding: 40px 20px;">
+      <div style="font-size: 3rem; margin-bottom: 10px;">⏳</div>
+      <h3 style="color: var(--accent-cyan); margin-bottom: 8px;">En espera del Director...</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem;">
+        La pantalla cargará automáticamente en cuanto el Director seleccione una canción del repertorio.
+      </p>
+    </div>
+
+    <!-- PANEL FLOTANTE SALTOS (DIRECTOR) -->
+    <div class="card" id="director-panel" style="display: none;">
+      <div class="card-title" style="color: var(--accent-orange);">🎛️ Saltos y Control</div>
+      <div class="section-buttons-grid" id="section-buttons"></div>
+    </div>
+
+    <!-- VISOR DE CANCIÓN Y CONTROLES DE TONO -->
+    <div class="card" id="song-card" style="display: none;">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #0c0d14; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+        <div style="display: flex; gap: 5px;">
+          <button class="btn btn-sec" style="width:auto; padding:6px 12px;" onclick="changeKey(-1)">-1 Tono</button>
+          <button class="btn btn-sec" style="width:auto; padding:6px 12px;" onclick="changeKey(1)">+1 Tono</button>
+        </div>
+        <span id="current-key-display" style="font-size: 0.85rem; font-weight: bold; color: var(--accent-orange);">Tono: 0</span>
+        <button id="btn-decouple" class="btn btn-sec" style="width:auto; padding:6px 12px; font-size: 0.75rem;" onclick="toggleDecouple()">🔒 Acoplado</button>
+      </div>
+
+      <div class="card-title" id="song-title">Cargando...</div>
+      <div id="song-viewer"></div>
+    </div>
+
+    <!-- CONSOLA -->
+    <div class="card">
+      <div class="card-title" style="color: var(--text-muted);">Consola de Registro</div>
+      <div id="console-log"></div>
+    </div>
+  </div>
+
+  <!-- AVISO EMERGENTE -->
+  <div id="quick-toast"></div>
+
+  <script src="js/songs.js"></script>
+  <script src="js/p2p.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
