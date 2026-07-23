@@ -323,12 +323,39 @@ function handleIncomingP2PData(data) {
     }
   }
 
-  if (data.type === 'STOP_SONG') {
+if (data.type === 'STOP_SONG') {
     stopMetronomeVisual();
     
     const role = localStorage.getItem(STORAGE_USER_ROLE);
+
     if (role === 'tv') {
-      showWaitingScreen();
+      // 1. Crear el contenedor del flash si no existe en el DOM
+      let flashEl = document.getElementById('tv-flash-burst');
+      if (!flashEl) {
+        flashEl = document.createElement('div');
+        flashEl.id = 'tv-flash-burst';
+        document.body.appendChild(flashEl);
+      }
+
+      // 2. Disparar el destello de platillo
+      flashEl.classList.remove('animate-burst');
+      void flashEl.offsetWidth; // Forzar reflow para reiniciar la animación
+      flashEl.classList.add('animate-burst');
+
+      // 3. Ocultar letras y título justo en el clímax del destello (a los 200ms)
+      setTimeout(() => {
+        const songTitleEl = document.getElementById('song-title');
+        if (songTitleEl) {
+          songTitleEl.classList.remove('show-intro-title');
+        }
+
+        document.querySelectorAll('.tv-section-block').forEach(el => {
+          el.classList.remove('active-tv-section');
+        });
+
+        showWaitingScreen();
+      }, 200);
+
     } else {
       const btnCD = document.getElementById('btn-start-countdown');
       if (btnCD) btnCD.style.display = 'block';
@@ -576,7 +603,7 @@ function directorSelectSong(songId) {
   log(`📢 Canción transmitida: ${currentSong.title}`);
 }
 
-// RENDERIZADO DE CANCIÓN
+// RENDERIZADO DE CANCIÓN CON BLOQUES ESTRUCTURADOS PARA MODO TV
 function renderCurrentSong() {
   if (!currentSong) return;
 
@@ -595,21 +622,22 @@ function renderCurrentSong() {
   const lines = transposedContent.split('\n');
   let html = '';
   const sections = [];
-  let currentBlockId = 'intro';
-  let isInsideBlock = false;
+  let isInsideTvBlock = false;
 
   lines.forEach((line) => {
     const trimmed = line.trim();
+
     if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
       const name = trimmed.replace('[', '').replace(']', '');
       const secId = name.toLowerCase().replace(/\s+/g, '');
       sections.push({ name, id: secId });
 
       if (role === 'tv') {
-        if (isInsideBlock) html += `</div>`;
-        currentBlockId = secId;
+        if (isInsideTvBlock) {
+          html += `</div>`; // Cerrar el bloque de la sección anterior
+        }
         html += `<div class="tv-section-block" id="tv-sec-${secId}">`;
-        isInsideBlock = true;
+        isInsideTvBlock = true;
       } else {
         html += `<span class="section-header" id="sec-${secId}">${trimmed}</span>`;
       }
@@ -618,36 +646,63 @@ function renderCurrentSong() {
         html += `<span class="chord">${line}</span>\n`;
       }
     } else {
-      if (trimmed.length > 0) {
+      // En Modo TV incluimos las líneas del texto con su salto correspondiente
+      if (role === 'tv') {
+        if (trimmed.length > 0) {
+          html += `<div class="tv-lyric-line">${trimmed}</div>`;
+        }
+      } else {
         html += `${line}\n`;
       }
     }
   });
 
-  if (role === 'tv' && isInsideBlock) {
-    html += `</div>`;
+  if (role === 'tv' && isInsideTvBlock) {
+    html += `</div>`; // Cerrar el último bloque
   }
 
   viewer.innerHTML = html;
   buildDirectorControls(sections);
   updateKeyControlsUI(semitonesToUse);
 
+  // En Modo TV forzamos la visualización de la primera sección
   if (role === 'tv') {
-    const targetSection = currentSectionId || (sections.length > 0 ? sections[0].id : 'verso1');
+    const targetSection = currentSectionId || (sections.length > 0 ? sections[0].id : 'intro');
     showTvSectionOnly(targetSection);
   }
 }
 
+// CONTROL DE VISIBILIDAD DE TÍTULO Y LETRAS EN MODO TV
 function showTvSectionOnly(secId) {
+  const songTitleEl = document.getElementById('song-title');
+
+  // Si se selecciona INTRO o no hay sección activa
+  if (!secId || secId === 'intro' || secId.includes('intro')) {
+    // 1. Ocultar todos los bloques de letras
+    document.querySelectorAll('.tv-section-block').forEach(el => {
+      el.classList.remove('active-tv-section');
+    });
+
+    // 2. Mostrar el título gigante centrado
+    if (songTitleEl) {
+      songTitleEl.classList.add('show-intro-title');
+    }
+    return;
+  }
+
+  // Si se selecciona un VERSO, CORO, PUENTE, etc.
+  // 1. Ocultar el título de la canción
+  if (songTitleEl) {
+    songTitleEl.classList.remove('show-intro-title');
+  }
+
+  // 2. Ocultar demás secciones y activar únicamente la seleccionada
   document.querySelectorAll('.tv-section-block').forEach(el => {
     el.classList.remove('active-tv-section');
   });
 
   let targetBlock = document.getElementById(`tv-sec-${secId}`);
-  if (!targetBlock) {
-    const firstBlock = document.querySelector('.tv-section-block');
-    if (firstBlock) firstBlock.classList.add('active-tv-section');
-  } else {
+  if (targetBlock) {
     targetBlock.classList.add('active-tv-section');
   }
 }
@@ -736,6 +791,7 @@ function sendCountdownCommand() {
   log('⏱️ Cuenta regresiva iniciada...');
 }
 
+// CUENTA REGRESIVA CON AUTO-ACTIVACIÓN DE PRIMERA SECCIÓN/INTRO
 function runCountdownAnimation() {
   const overlay = document.getElementById('countdown-overlay');
   const numEl = document.getElementById('countdown-number');
@@ -754,7 +810,7 @@ function runCountdownAnimation() {
   keyInfoEl.innerText = `Tono: ${notaActual} | ${currentBpm} BPM`;
 
   const introData = extractIntroContent(currentSong.content, role, semitonesToUse);
-  introLabelEl.innerText = role === 'voces' ? "Entrada / Primera línea:" : "Acordes de la Intro:";
+  introLabelEl.innerText = role === 'voces' || role === 'tv' ? "Entrada / Primera línea:" : "Acordes de la Intro:";
   introContentEl.innerText = introData;
 
   overlay.style.display = 'flex';
@@ -768,7 +824,21 @@ function runCountdownAnimation() {
     } else if (count === 0) {
       numEl.innerText = "🔥";
       introLabelEl.innerText = "¡ENTRAMOS YA!";
+      
+      // 1. Iniciar Metrónomo
       startMetronomeVisual();
+      
+      // 2. AUTO-SELECCIONAR INTRO O PRIMERA SECCIÓN AL TERMINAR EL CONTEO
+      const firstSectionHeader = document.querySelector('.section-header') || document.querySelector('.tv-section-block');
+      let firstSecId = 'intro';
+
+      if (firstSectionHeader) {
+        firstSecId = firstSectionHeader.id.replace('sec-', '').replace('tv-sec-', '');
+      }
+
+      // Activar el salto automáticamente para toda la banda y la TV
+      triggerJump(firstSecId);
+
     } else {
       clearInterval(interval);
       overlay.style.display = 'none';

@@ -1,261 +1,298 @@
+/* ==========================================================================
+   DANSINGAPP - ESTILOS GENERALES Y TEMA
+   ========================================================================== */
+
 :root {
-  --bg-main: #0d0e15;
-  --bg-card: #161824;
-  --bg-input: #0a0b10;
+  --bg-color: #0d0e15;
+  --card-bg: #161824;
+  --text-main: #ffffff;
+  --text-muted: #8e94a0;
   --accent-cyan: #00f2fe;
   --accent-orange: #ff9800;
-  --accent-green: #10b981;
-  --accent-red: #ef4444;
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-  --border: #26293b;
+  --accent-green: #00e676;
+  --border-color: #26293b;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-
-body { background-color: var(--bg-main); color: var(--text-main); padding: 16px; padding-bottom: 40px; }
-
-.app-header { text-align: center; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 12px; }
-.app-header img { width: 42px; height: 42px; }
-.app-header h1 { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent-cyan), #4facfe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
-.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-.card-title { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent-cyan); margin-bottom: 12px; }
-
-.input-group { margin-bottom: 12px; }
-input[type="text"], select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-input); color: #fff; font-size: 0.95rem; outline: none; transition: border 0.2s; }
-input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
-
-.btn { width: 100%; padding: 12px; border-radius: 10px; border: none; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: transform 0.1s, opacity 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.btn:active { transform: scale(0.98); }
-.btn-cyan { background: var(--accent-cyan); color: #000; }
-.btn-green { background: var(--accent-green); color: #fff; }
-.btn-orange { background: var(--accent-orange); color: #000; }
-
-.status-badge { font-size: 0.8rem; font-weight: 600; margin-top: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); display: inline-block; }
-
-/* Panel del Director */
-#director-panel { display: none; position: sticky; top: 10px; z-index: 100; background: rgba(22, 24, 36, 0.95); backdrop-filter: blur(8px); border: 1px solid var(--accent-orange); }
-.section-buttons-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.btn-sec { width: auto; flex: 1; min-width: 80px; padding: 10px; background: #222538; color: #fff; border: 1px solid var(--border); font-size: 0.85rem; }
-
-/* Visor Cifra Club */
-#song-viewer { font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace; font-size: 1.15rem; line-height: 1.6; white-space: pre-wrap; background: #08090d; padding: 20px; border-radius: 12px; border: 1px solid #1a1c2e; overflow-x: auto; }
-.chord { color: var(--accent-orange); font-weight: bold; }
-
-
-/* MARGEN DE SEGURIDAD PARA EL SCROLL ( Evita que el panel flotante tape el texto ) */
-.section-header { 
-  color: var(--accent-cyan); 
-  font-weight: 800; 
-  font-family: sans-serif; 
-  margin-top: 24px; 
-  margin-bottom: 8px; 
-  border-bottom: 1px solid var(--border); 
-  padding-bottom: 4px; 
-  display: block; 
-  font-size: 1.1rem;
-  /* Aumentamos a 380px para dar espacio completo al panel del director con todos sus botones */
-  scroll-margin-top: 380px; 
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
-#console-log { background: #050508; color: #10b981; padding: 10px; height: 80px; overflow-y: auto; font-family: monospace; border-radius: 8px; font-size: 0.75rem; border: 1px solid var(--border); }
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  padding: 12px;
+  padding-bottom: 90px;
+  min-height: 100vh;
+}
 
-/* Modal de Onboarding */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(13, 14, 21, 0.95);
-  backdrop-filter: blur(10px);
-  z-index: 999;
+/* ==========================================================================
+   HEADER Y TARJETAS
+   ========================================================================== */
+
+.app-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
-.modal-card {
+.app-header img {
+  width: 32px;
+  height: 32px;
+}
+
+.app-header h1 {
+  font-size: 1.3rem;
+  color: var(--accent-cyan);
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.card-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* ==========================================================================
+   BOTONES E INPUTS
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
-  max-width: 400px;
-  border: 1px solid var(--accent-cyan);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.2s, background 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-cyan {
+  background: var(--accent-cyan);
+  color: #000000;
+}
+
+.btn-orange {
+  background: var(--accent-orange);
+  color: #000000;
+}
+
+.btn-sec {
+  background: #222538;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0a0b12;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  outline: none;
+  margin-bottom: 10px;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+  border-color: var(--accent-cyan);
+}
+
+.input-group {
+  margin-bottom: 12px;
 }
 
 .input-label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-/* EFECTO DE RESALTADO TEMPORAL EN SECCIÓN */
-.section-highlight {
-  animation: neonPulse 2.5s ease-out forwards;
-  border-left: 4px solid var(--accent-cyan);
-  padding-left: 8px;
-  border-radius: 4px;
+  margin-bottom: 4px;
 }
 
-@keyframes neonPulse {
-  0% {
-    background-color: rgba(0, 242, 254, 0.35); /* Resplandor cian intenso al inicio */
-    box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
-  }
-  50% {
-    background-color: rgba(0, 242, 254, 0.2);
-  }
-  100% {
-    background-color: transparent; /* Se desvanece a transparente */
-    box-shadow: none;
-  }
+/* ==========================================================================
+   METRÓNOMO BARRA DE ESTADO (STICKY TOP)
+   ========================================================================== */
+
+#metronome-card {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+  border-bottom: 1px solid var(--accent-cyan);
 }
 
-/* AVISO FLOTANTE MÁS VISIBLE Y DURADERO */
-#quick-toast {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  background: #ff9800;
-  color: #000;
-  padding: 14px 28px;
-  border-radius: 30px;
-  font-weight: 800;
-  font-size: 1.1rem;
-  box-shadow: 0 0 25px rgba(255, 152, 0, 0.7);
-  backdrop-filter: blur(8px);
-  z-index: 1000;
-  opacity: 0;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  pointer-events: none;
-  text-align: center;
-  white-space: nowrap;
-  border: 2px solid #fff;
-}
-
-#quick-toast.show {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-  animation: toastBounce 0.5s ease-in-out;
-}
-
-@keyframes toastBounce {
-  0% { transform: translateX(-50%) translateY(100px); }
-  70% { transform: translateX(-50%) translateY(-10px); }
-  100% { transform: translateX(-50%) translateY(0); }
-}
-
-.btn-alert {
-  background: #332200;
-  color: var(--accent-orange);
-  border: 1px solid var(--accent-orange);
-  font-size: 0.8rem;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin: 2px;
-}
-.btn-alert:active { transform: scale(0.95); }
-
-/* OVERLAY DE CUENTA REGRESIVA CON INFO DE CANCIÓN E INTRO */
-#countdown-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(13, 14, 21, 0.96);
-  backdrop-filter: blur(12px);
-  z-index: 2000;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  text-align: center;
-}
-
-#countdown-song-info {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: #fff;
-  margin-bottom: 5px;
-}
-
-#countdown-key-info {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--accent-orange);
-  margin-bottom: 20px;
-}
-
-#countdown-number {
-  font-size: 8rem;
-  font-weight: 900;
-  color: var(--accent-cyan);
-  text-shadow: 0 0 40px var(--accent-cyan);
-  line-height: 1;
-  margin: 10px 0;
-  animation: popScale 0.8s ease-in-out infinite;
-}
-
-#countdown-intro-box {
-  background: #181b29;
-  border: 1px solid var(--accent-cyan);
-  padding: 12px 20px;
-  border-radius: 12px;
-  margin-top: 15px;
-  max-width: 90%;
-}
-
-#countdown-intro-label {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  font-weight: bold;
-  letter-spacing: 1px;
-}
-
-#countdown-intro-content {
-  font-family: 'Cascadia Code', monospace;
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: var(--accent-orange);
-  margin-top: 4px;
-}
-
-/* BOTONES DE ALERTAS PARA MÚSICOS */
-.musician-alerts-bar {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.btn-musician-alert {
-  background: #1c2333;
-  color: #64b5f6;
-  border: 1px solid #2b3854;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.btn-musician-alert:active { transform: scale(0.95); }
-
-/* LUZ DEL METRÓNOMO */
 .metro-light {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #333;
-  transition: background 0.1s;
+  background: #333333;
+  transition: background 0.1s, box-shadow 0.1s;
 }
+
 .metro-light.flash {
   background: var(--accent-cyan);
   box-shadow: 0 0 12px var(--accent-cyan);
 }
 
-/* BOTÓN DE CHAT FLOTANTE (ALTURA MÁXIMA Z-INDEX PARA MÓVILES) */
+/* ==========================================================================
+   BOTONES DE AVISO RÁPIDO PARA MÚSICOS
+   ========================================================================== */
+
+.musician-alerts-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.btn-musician-alert {
+  flex: 1;
+  padding: 8px 6px;
+  background: #181a28;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btn-musician-alert:active {
+  background: var(--accent-cyan);
+  color: #000000;
+}
+
+/* ==========================================================================
+   PANEL DEL DIRECTOR Y SALTOS
+   ========================================================================== */
+
+.section-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 6px;
+}
+
+.btn-alert {
+  padding: 6px 10px;
+  background: #1e2030;
+  border: 1px solid #333333;
+  border-radius: 6px;
+  color: #ffd54f;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   VISOR DE CANCIONES, ACORDES Y SECCIONES
+   ========================================================================== */
+
+#song-viewer {
+  font-family: "Courier New", Courier, monospace;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #ffffff;
+}
+
+.chord {
+  color: var(--accent-orange);
+  font-weight: bold;
+}
+
+.section-header {
+  display: inline-block;
+  color: var(--accent-cyan);
+  font-weight: bold;
+  margin-top: 14px;
+  margin-bottom: 4px;
+  background: rgba(0, 242, 254, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border-left: 3px solid var(--accent-cyan);
+}
+
+.section-highlight {
+  animation: pulseSection 2.5s ease;
+}
+
+@keyframes pulseSection {
+  0% { background: rgba(0, 242, 254, 0.4); }
+  100% { background: transparent; }
+}
+
+/* ==========================================================================
+   CONSOLA Y AVISO EMERGENTE (TOAST)
+   ========================================================================== */
+
+#console-log {
+  height: 90px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: #08090f;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+#quick-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: rgba(255, 152, 0, 0.95);
+  color: #000000;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+  text-align: center;
+  max-width: 90vw;
+}
+
+#quick-toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ==========================================================================
+   CHAT FLOTANTE
+   ========================================================================== */
+
 #chat-toggle-btn {
   position: fixed;
   bottom: 25px;
@@ -264,12 +301,12 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   height: 58px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--accent-cyan), #4facfe);
-  color: #000;
-  border: 2px solid #fff;
+  color: #000000;
+  border: 2px solid #ffffff;
   font-size: 1.6rem;
   box-shadow: 0 4px 20px rgba(0, 242, 254, 0.5);
   cursor: pointer;
-  z-index: 9999 !important; /* Asegura que siempre quede sobre cualquier elemento en el celular */
+  z-index: 9999 !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -280,7 +317,7 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   position: fixed;
   bottom: 90px;
   right: 15px;
-  left: 15px; /* En celulares abarca ancho cómodo */
+  left: 15px;
   max-width: 340px;
   margin-left: auto;
   height: 380px;
@@ -294,7 +331,6 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   z-index: 9999 !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
 }
-#chat-toggle-btn:active { transform: scale(0.9); }
 
 #chat-messages {
   flex: 1;
@@ -303,7 +339,6 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding-right: 4px;
 }
 
 .chat-msg {
@@ -312,29 +347,89 @@ input[type="text"]:focus, select:focus { border-color: var(--accent-cyan); }
   border-radius: 8px;
   border: 1px solid #26293b;
 }
+
 .chat-msg-author {
   font-weight: bold;
   color: var(--accent-orange);
   font-size: 0.75rem;
   margin-bottom: 2px;
 }
-/* METRÓNOMO FIJO CON SOMBRA Y Z-INDEX CONTROLADO */
-#metronome-card {
-  position: sticky;
+
+/* ==========================================================================
+   OVERLAY DE CUENTA REGRESIVA
+   ========================================================================== */
+
+#countdown-overlay {
+  position: fixed;
   top: 0;
-  z-index: 1100; /* Por debajo del chat y el overlay, por encima del scroll */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
-  border-bottom: 1px solid var(--accent-cyan);
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(13, 14, 21, 0.96);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
 }
 
-/* MODO PROYECCIÓN TV / STREAMING ULTRA-CLEAN */
-body.mode-tv {
-  background-color: #000000 !important;
+#countdown-song-info {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--accent-cyan);
+}
+
+#countdown-key-info {
+  font-size: 1.1rem;
+  color: var(--accent-orange);
+  margin-top: 4px;
+}
+
+#countdown-number {
+  font-size: 6rem;
+  font-weight: 900;
   color: #ffffff;
-  overflow: hidden; /* Evita barras de scroll en la TV */
+  margin: 15px 0;
 }
 
-/* Ocultar barra superior y tarjetas */
+#countdown-intro-box {
+  background: #181a28;
+  border: 1px solid var(--accent-cyan);
+  padding: 12px 20px;
+  border-radius: 12px;
+  max-width: 90%;
+}
+
+#countdown-intro-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+#countdown-intro-content {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--accent-orange);
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   MODO PROYECCIÓN TV / STREAMING (CENTRADOR ABSOLUTO DEFINITIVO)
+   ========================================================================== */
+
+body.mode-tv {
+  background: url('../img/fondo-holy.png') no-repeat center center / cover fixed !important;
+  color: #ffffff;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ocultar barra superior y elementos de músico */
 body.mode-tv header,
 body.mode-tv .musician-alerts-bar,
 body.mode-tv #metronome-card,
@@ -344,15 +439,17 @@ body.mode-tv #director-panel,
 body.mode-tv #chat-toggle-btn,
 body.mode-tv #chat-panel,
 body.mode-tv .card:has(#console-log),
+body.mode-tv .card:has(#profile-info),
 body.mode-tv #quick-toast,
 body.mode-tv #profile-info,
 body.mode-tv #net-status,
-body.mode-tv .card button:not(:last-child) {
+body.mode-tv #waiting-screen {
   display: none !important;
 }
 
-/* Dejar solo la tuerquita de perfil ultra discreta en la esquina */
+/* Dejar solo tuerca flotante arriba a la derecha al pasar el mouse */
 body.mode-tv .card:has(#profile-info) {
+  display: block !important;
   position: fixed;
   top: 10px;
   right: 10px;
@@ -360,166 +457,113 @@ body.mode-tv .card:has(#profile-info) {
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
+  margin: 0 !important;
   z-index: 9999;
-  opacity: 0.2;
+  opacity: 0.15;
   transition: opacity 0.3s;
 }
+
+body.mode-tv .card:has(#profile-info) div:first-child,
+body.mode-tv .card:has(#profile-info) button:not(:last-child) {
+  display: none !important;
+}
+
 body.mode-tv .card:has(#profile-info):hover {
   opacity: 1;
 }
 
-/* Tarjeta principal transparente y centrada en pantalla entera */
+/* CONTENEDOR PRINCIPAL QUE OCUPA EL 100% DE LA PANTALLA Y CENTRA */
 body.mode-tv #song-card {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 200 !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
 
 body.mode-tv #song-card > div:first-child {
-  display: none !important; /* Oculta barra de tonos */
+  display: none !important;
 }
 
-/* Título de la canción discreto y elegante arriba */
+/* TÍTULO EN MODO INTRO CENTRADO */
 body.mode-tv #song-title {
-  position: absolute;
-  top: 30px;
-  font-size: 1.4rem;
-  color: var(--accent-cyan);
-  text-align: center;
+  display: none;
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-align: center !important;
   text-transform: uppercase;
   letter-spacing: 3px;
-  opacity: 0.7;
+  text-shadow: 0 0 25px rgba(0, 242, 254, 0.8), 0 4px 25px rgba(0, 0, 0, 0.95);
+  max-width: 85vw;
 }
 
-/* Visor de proyección */
+body.mode-tv #song-title.show-intro-title {
+  display: block !important;
+}
+
+/* VISOR DE LETRAS CENTRADO ABSOLUTO */
 body.mode-tv #song-viewer {
-  width: 90vw;
-  max-width: 1200px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-/* Ocultar etiquetas [Intro], [Verso 1], etc. */
 body.mode-tv .section-header {
   display: none !important;
 }
 
-/* OCULTAR TODAS LAS SECCIONES QUE NO SEAN LA ACTIVA */
 body.mode-tv .tv-section-block {
-  display: none;
-  font-size: 3.2rem !important;
-  line-height: 1.6;
-  font-weight: 800;
-  color: #ffffff;
-  text-shadow: 0 4px 20px rgba(0,0,0,0.9);
-  animation: fadeInTv 0.4s ease-in-out;
+  display: none !important;
+  width: 85vw !important;
+  margin: 0 auto !important;
+  text-align: center !important;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* Mostrar únicamente el bloque activo */
 body.mode-tv .tv-section-block.active-tv-section {
   display: block !important;
-}
-
-@keyframes fadeInTv {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-/* PANTALLA STANDBY PARA MODO TV CON IMAGEN HOLY */
-
-body.mode-tv #waiting-screen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: url('../img/fondo-holy.png') no-repeat center center / cover !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  z-index: 50; /* Z-index menor que la canción para que no tape */
-  display: flex !important;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Cuando la canción se abre, ocultamos completamente el standby */
-body.mode-tv #song-card {
-  position: relative;
-  z-index: 200 !important;
-}
-
-body.mode-tv #waiting-app-view {
-  display: none !important;
-}
-
-body.mode-tv #waiting-tv-view {
-  display: flex !important;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-}
-
-.tv-standby-title {
-  font-size: 3.5rem;
-  font-weight: 900;
-  color: #fff8e7;
-  text-align: center;
-  letter-spacing: 4px;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 4px 30px rgba(0, 0, 0, 0.9);
-  font-family: 'Segoe UI', Roboto, sans-serif;
-  animation: pulseGold 3s infinite alternate ease-in-out;
-}
-
-@keyframes pulseGold {
-  from { opacity: 0.85; transform: scale(0.99); }
-  to { opacity: 1; transform: scale(1.02); }
-}
-
-/* POP-UP DISCRETO DE CONEXIÓN EN MODO TV (1 SEGUNDO) */
-#tv-connect-pop {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.8);
-  background: rgba(18, 20, 32, 0.92);
-  border: 2px solid var(--accent-cyan);
-  color: #fff;
-  padding: 16px 32px;
-  border-radius: 30px;
-  font-size: 1.5rem;
-  font-weight: bold;
-  box-shadow: 0 10px 30px rgba(0,242,254,0.4);
-  z-index: 99999;
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-#tv-connect-pop.show-pop {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: scale(1);
 }
 
-/* CUENTA REGRESIVA SIN ACORDES NI CAJAS TÉCNICAS EN MODO TV */
+body.mode-tv .tv-lyric-line {
+  font-size: 3.6rem !important;
+  line-height: 1.45;
+  font-weight: 900;
+  color: #ffffff;
+  text-align: center !important;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8);
+  margin-bottom: 16px;
+  width: 100% !important;
+}
+
+/* CUENTA REGRESIVA EN MODO TV */
 body.mode-tv #countdown-overlay {
   background: rgba(0, 0, 0, 0.95) !important;
 }
 
 body.mode-tv #countdown-key-info,
 body.mode-tv #countdown-intro-box {
-  display: none !important; /* Oculta tono y acordes de la intro en el proyector */
+  display: none !important;
 }
 
 body.mode-tv #countdown-song-info {
@@ -529,4 +573,36 @@ body.mode-tv #countdown-song-info {
 
 body.mode-tv #countdown-number {
   font-size: 8rem !important;
+}
+/* EFECTO DESTELLO / FLASH AL FINALIZAR CANCIÓN (MODO TV) */
+#tv-flash-burst {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle, rgba(255, 240, 200, 0.95) 0%, rgba(255, 215, 0, 0.6) 50%, rgba(0, 0, 0, 0) 100%);
+  z-index: 99999;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Animación gatillada por JS */
+#tv-flash-burst.animate-burst {
+  animation: flashBurst 1.2s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes flashBurst {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  15% {
+    opacity: 1; /* Golpe seco del platillo */
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0; /* Disolución suave hacia la Biblia y Cruz */
+    transform: scale(1.2);
+  }
 }
