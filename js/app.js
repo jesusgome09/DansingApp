@@ -1,9 +1,10 @@
-const STORAGE_USER_NAME = 'dansing_user_name';
-const STORAGE_USER_ROLE = 'dansing_user_role';
-const STORAGE_USER_UUID = 'dansing_user_uuid';
-const STORAGE_ROOM_CODE = 'dansing_room_code';
-const STORAGE_SAVED_KEYS = 'dansing_saved_keys';
-const STORAGE_SAVED_BPMS = 'dansing_saved_bpms';
+// CLAVES DE ALMACENAMIENTO CON PREFIJO ÚNICO PARA DANSINGAPP
+const STORAGE_USER_NAME     = 'dansing_user_name';
+const STORAGE_USER_ROLE     = 'dansing_user_role';
+const STORAGE_USER_UUID     = 'dansing_user_uuid';
+const STORAGE_ROOM_CODE     = 'dansing_room_code';
+const STORAGE_SAVED_KEYS    = 'dansing_saved_keys';
+const STORAGE_SAVED_BPMS    = 'dansing_saved_bpms';
 const STORAGE_SAVED_SETLIST = 'dansing_saved_setlist';
 
 let currentSong = null;
@@ -104,12 +105,17 @@ function saveUserProfile() {
 }
 
 function resetUserProfile() {
-  if (confirm('¿Quieres cambiar tu perfil?')) {
-    localStorage.clear();
+  if (confirm('¿Quieres cambiar tu perfil de DansingApp?')) {
+    // Recorremos las claves de LocalStorage y eliminamos SOLO las de DansingApp
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('dansing_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    
     location.reload();
   }
 }
-
 // RED P2P CON ID ÚNICO
 function autoConnectNetwork(name, role) {
   const roomCode = localStorage.getItem(STORAGE_ROOM_CODE) || 'ensayo';
