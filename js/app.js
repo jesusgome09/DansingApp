@@ -1,6 +1,6 @@
 const STORAGE_USER_NAME = 'dansing_user_name';
 const STORAGE_USER_ROLE = 'dansing_user_role';
-const STORAGE_USER_UUID = 'dansing_user_uuid'; // ID único permanente
+const STORAGE_USER_UUID = 'dansing_user_uuid';
 const STORAGE_ROOM_CODE = 'dansing_room_code';
 const STORAGE_SAVED_KEYS = 'dansing_saved_keys';
 const STORAGE_SAVED_BPMS = 'dansing_saved_bpms';
@@ -71,9 +71,7 @@ function checkUserSession() {
       document.getElementById('metronome-controls').style.display = 'none';
     }
 
-    // Cargar Setlist de la memoria local si existe
     loadSetlistFromStorage();
-
     showWaitingScreen();
     autoConnectNetwork(savedName, savedRole);
   }
@@ -112,7 +110,7 @@ function resetUserProfile() {
   }
 }
 
-// RED P2P CON ID ÚNICO Y ESTADO DE DIRECTOR
+// RED P2P CON ID ÚNICO
 function autoConnectNetwork(name, role) {
   const roomCode = localStorage.getItem(STORAGE_ROOM_CODE) || 'ensayo';
   const myUniqueId = getUniqueUserId();
@@ -138,34 +136,38 @@ function connectToLeader(roomCode) {
   });
 }
 
+// VERIFICACIÓN DE LIVENESS DEL DIRECTOR ANTES DE TOMAR CONTROL
 function toggleDirector(isDirectorCheck) {
   const checkbox = document.getElementById('director-checkbox');
   const roomCode = localStorage.getItem(STORAGE_ROOM_CODE) || 'ensayo';
   const savedName = localStorage.getItem(STORAGE_USER_NAME);
 
   if (isDirectorCheck) {
+    document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-orange)">🔍 Comprobando si hay Director activo...</span>`;
+
+    // Intentamos iniciar el rol de Director
     const leaderId = `${roomCode}-director`;
 
     initPeerNetwork(
       leaderId,
       () => {
-        log('👑 Modo Director ACTIVO.');
+        log('👑 Modo Director ACTIVO. Eres el nuevo líder.');
         document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-green)">👑 Director Activo (${savedName})</span>`;
         document.getElementById('director-catalog-card').style.display = 'block';
         
-        // Avisar a la banda quién es el Director actual
         sendP2PData({ type: 'DIRECTOR_ANNOUNCE', name: savedName });
         renderCatalog();
       },
       (err) => {
         if (err.type === 'DIRECTOR_TAKEN') {
-          alert(`❌ Ya existe un Director activo en este ensayo.`);
+          alert(`❌ Hay un Director activo respondiendo en el ensayo.`);
           checkbox.checked = false;
           document.getElementById('director-catalog-card').style.display = 'none';
         }
       },
       handleIncomingP2PData
     );
+
   } else {
     document.getElementById('director-catalog-card').style.display = 'none';
     document.getElementById('director-panel').style.display = 'none';
@@ -174,7 +176,7 @@ function toggleDirector(isDirectorCheck) {
   }
 }
 
-// RECEPCIÓN Y TRATAMIENTO DE COMANDOS P2P
+// RECEPCIÓN DE DATOS TRAP
 function handleIncomingP2PData(data) {
   if (!data) return;
 
@@ -229,7 +231,6 @@ function handleIncomingP2PData(data) {
       updateBpmUI(currentBpm);
     }
 
-    // Restaurar botón de cuenta regresiva al abrir canción
     const btnCD = document.getElementById('btn-start-countdown');
     if (btnCD) btnCD.style.display = 'block';
 
@@ -274,7 +275,6 @@ function handleIncomingP2PData(data) {
     }
   }
 
-  // PARAR METRÓNOMO AL FINALIZAR CANCIÓN
   if (data.type === 'STOP_SONG') {
     stopMetronomeVisual();
     const btnCD = document.getElementById('btn-start-countdown');
@@ -287,69 +287,6 @@ function handleIncomingP2PData(data) {
     saveSetlistToStorage();
     renderSetlistUI();
   }
-}
-
-// GESTIÓN Y PERSISTENCIA DEL SETLIST (LOCALSTORAGE Y MULTI-DISPOSITIVO)
-function toggleCatalogVisibility() {
-  const wrapper = document.getElementById('catalog-foldable-wrapper');
-  if (!wrapper) return;
-  const isHidden = wrapper.style.display === 'none';
-  wrapper.style.display = isHidden ? 'block' : 'none';
-  if (isHidden) renderCatalog();
-}
-
-function toggleSetlistSong(songId) {
-  const song = REPERTORIO.find(s => s.id === songId);
-  if (!song) return;
-
-  const idx = setlist.findIndex(s => s.id === songId);
-  if (idx === -1) {
-    setlist.push(song);
-  } else {
-    setlist.splice(idx, 1);
-  }
-
-  saveSetlistToStorage();
-  renderSetlistUI();
-  renderCatalog(document.getElementById('catalog-search')?.value || "");
-
-  // Enviar actualización del setlist a todos
-  sendP2PData({ type: 'UPDATE_SETLIST', setlist: setlist });
-}
-
-function saveSetlistToStorage() {
-  localStorage.setItem(STORAGE_SAVED_SETLIST, JSON.stringify(setlist));
-}
-
-function loadSetlistFromStorage() {
-  const saved = localStorage.getItem(STORAGE_SAVED_SETLIST);
-  if (saved) {
-    try { setlist = JSON.parse(saved); renderSetlistUI(); } catch(e){}
-  }
-}
-
-function renderSetlistUI() {
-  const container = document.getElementById('setlist-items');
-  if (!container) return;
-
-  if (setlist.length === 0) {
-    container.innerHTML = `<span style="color:#777;">No hay canciones seleccionadas. Toca <b>"📂 Añadir Canciones"</b> para armar tu lista.</span>`;
-    return;
-  }
-
-  const isDirector = document.getElementById('director-checkbox')?.checked;
-
-  let html = '<div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">';
-  setlist.forEach((song, idx) => {
-    html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; background:#181b29; padding:8px 10px; border-radius:6px; border:1px solid #26293b;">
-        <span><b>${idx + 1}. ${song.title}</b> <small style="color:var(--accent-orange); margin-left:6px;">${song.keyOriginal}</small></span>
-        ${isDirector ? `<button class="btn btn-cyan" style="width:auto; padding:5px 12px; font-size:0.8rem; margin:0;" onclick="directorSelectSong('${song.id}')">▶ Tocar</button>` : ''}
-      </div>
-    `;
-  });
-  html += '</div>';
-  container.innerHTML = html;
 }
 
 // METRÓNOMO CONTROL EXCLUSIVO
@@ -449,7 +386,69 @@ function getSavedBpmForSong(songId) {
   return saved[songId] !== undefined ? saved[songId] : null;
 }
 
-// CANCIONES
+// SETLIST PERSISTENCIA Y PANEL
+function toggleCatalogVisibility() {
+  const wrapper = document.getElementById('catalog-foldable-wrapper');
+  if (!wrapper) return;
+  const isHidden = wrapper.style.display === 'none';
+  wrapper.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) renderCatalog();
+}
+
+function toggleSetlistSong(songId) {
+  const song = REPERTORIO.find(s => s.id === songId);
+  if (!song) return;
+
+  const idx = setlist.findIndex(s => s.id === songId);
+  if (idx === -1) {
+    setlist.push(song);
+  } else {
+    setlist.splice(idx, 1);
+  }
+
+  saveSetlistToStorage();
+  renderSetlistUI();
+  renderCatalog(document.getElementById('catalog-search')?.value || "");
+
+  sendP2PData({ type: 'UPDATE_SETLIST', setlist: setlist });
+}
+
+function saveSetlistToStorage() {
+  localStorage.setItem(STORAGE_SAVED_SETLIST, JSON.stringify(setlist));
+}
+
+function loadSetlistFromStorage() {
+  const saved = localStorage.getItem(STORAGE_SAVED_SETLIST);
+  if (saved) {
+    try { setlist = JSON.parse(saved); renderSetlistUI(); } catch(e){}
+  }
+}
+
+function renderSetlistUI() {
+  const container = document.getElementById('setlist-items');
+  if (!container) return;
+
+  if (setlist.length === 0) {
+    container.innerHTML = `<span style="color:#777;">No hay canciones seleccionadas. Toca <b>"📂 Añadir Canciones"</b> para armar tu lista.</span>`;
+    return;
+  }
+
+  const isDirector = document.getElementById('director-checkbox')?.checked;
+
+  let html = '<div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">';
+  setlist.forEach((song, idx) => {
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#181b29; padding:8px 10px; border-radius:6px; border:1px solid #26293b;">
+        <span><b>${idx + 1}. ${song.title}</b> <small style="color:var(--accent-orange); margin-left:6px;">${song.keyOriginal}</small></span>
+        ${isDirector ? `<button class="btn btn-cyan" style="width:auto; padding:5px 12px; font-size:0.8rem; margin:0;" onclick="directorSelectSong('${song.id}')">▶ Tocar</button>` : ''}
+      </div>
+    `;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// REPERTORIO
 function renderCatalog(filter = "") {
   const container = document.getElementById('catalog-list');
   if (!container) return;
@@ -561,9 +560,78 @@ function renderCurrentSong() {
   updateKeyControlsUI(semitonesToUse);
 }
 
+// SCROLL INTELIGENTE CON COMPENSACIÓN PARA METRÓNOMO STICKY
+function triggerJump(secId) {
+  currentSectionId = secId;
+  highlightAndScrollSection(secId);
+  sendP2PData({ type: 'JUMP', target: secId });
+}
+
+function highlightAndScrollSection(secId) {
+  const targetEl = document.getElementById(`sec-${secId}`);
+  if (!targetEl) return;
+
+  const isDirector = document.getElementById('director-checkbox')?.checked;
+  const directorPanel = document.getElementById('director-panel');
+  const metronomeCard = document.getElementById('metronome-card');
+
+  // Calculamos alto de la barra sticky del metrónomo
+  let metroHeight = metronomeCard ? metronomeCard.offsetHeight : 0;
+  let offsetMargin = metroHeight + 15;
+
+  // Si es Director, sumamos también la altura de su panel de botones
+  if (isDirector && directorPanel && directorPanel.style.display !== 'none') {
+    offsetMargin += directorPanel.offsetHeight + 10;
+  }
+
+  const elementPosition = targetEl.getBoundingClientRect().top + window.pageYOffset;
+  const targetY = elementPosition - offsetMargin;
+
+  window.scrollTo({
+    top: targetY,
+    behavior: 'smooth'
+  });
+
+  document.querySelectorAll('.section-highlight').forEach(el => el.classList.remove('section-highlight'));
+  targetEl.classList.add('section-highlight');
+
+  setTimeout(() => {
+    targetEl.classList.remove('section-highlight');
+  }, 2500);
+}
+
+// CHAT FLOTANTE MÓVIL
+function toggleChatPanel() {
+  const panel = document.getElementById('chat-panel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const savedName = localStorage.getItem(STORAGE_USER_NAME) || 'Músico';
+  appendChatMessage(savedName, text);
+  showToastAlert(`💬 ${savedName.toUpperCase()}: ${text}`);
+
+  sendP2PData({ type: 'CHAT_MSG', author: savedName, text: text });
+  input.value = '';
+}
+
+function appendChatMessage(author, text) {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'chat-msg';
+  msgDiv.innerHTML = `<div class="chat-msg-author">${author}</div><div>${text}</div>`;
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
+}
+
 // CUENTA REGRESIVA
 function sendCountdownCommand() {
-  // Ocultar botón de cuenta regresiva mientras suena la canción
   const btnCD = document.getElementById('btn-start-countdown');
   if (btnCD) btnCD.style.display = 'none';
 
@@ -604,9 +672,7 @@ function runCountdownAnimation() {
     } else if (count === 0) {
       numEl.innerText = "🔥";
       introLabelEl.innerText = "¡ENTRAMOS YA!";
-      
       startMetronomeVisual();
-      
     } else {
       clearInterval(interval);
       overlay.style.display = 'none';
@@ -614,7 +680,7 @@ function runCountdownAnimation() {
   }, 1000);
 }
 
-// CONTROLES DEL DIRECTOR
+// AUXILIARES CONTROLES DIRECTOR
 function buildDirectorControls(sections) {
   const container = document.getElementById('section-buttons');
   if (!container) return;
@@ -646,7 +712,6 @@ function buildDirectorControls(sections) {
     b.innerText = msg;
     b.onclick = () => {
       if (msg.includes("Finalizar")) {
-        // Al darle Finalizar, se apaga el metrónomo en todos los dispositivos
         stopMetronomeVisual();
         sendP2PData({ type: 'STOP_SONG' });
       }
@@ -658,11 +723,9 @@ function buildDirectorControls(sections) {
   container.appendChild(alertContainer);
 }
 
-// CHAT Y AVISOS
 function sendMusicianAlert(msg) {
   const savedName = localStorage.getItem(STORAGE_USER_NAME) || 'Músico';
   const fullMsg = `📢 ${savedName.toUpperCase()}: ${msg}`;
-  
   showToastAlert(fullMsg);
   sendP2PData({ type: 'QUICK_ALERT', message: fullMsg });
 }
@@ -686,29 +749,6 @@ function showToastAlert(msg) {
   }, 7000);
 }
 
-function sendChatMessage() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-
-  const savedName = localStorage.getItem(STORAGE_USER_NAME) || 'Músico';
-  appendChatMessage(savedName, text);
-  showToastAlert(`💬 ${savedName.toUpperCase()}: ${text}`);
-
-  sendP2PData({ type: 'CHAT_MSG', author: savedName, text: text });
-  input.value = '';
-}
-
-function appendChatMessage(author, text) {
-  const container = document.getElementById('chat-messages');
-  const msgDiv = document.createElement('div');
-  msgDiv.className = 'chat-msg';
-  msgDiv.innerHTML = `<div class="chat-msg-author">${author}</div><div>${text}</div>`;
-  container.appendChild(msgDiv);
-  container.scrollTop = container.scrollHeight;
-}
-
-// AUXILIARES
 function changeFontSize(delta) {
   currentFontSize = Math.max(0.8, Math.min(2.0, currentFontSize + (delta * 0.1)));
   const viewer = document.getElementById('song-viewer');
@@ -721,9 +761,7 @@ function changeKey(delta) {
   if (isDirector) {
     globalSemitones += delta;
     localSemitones = globalSemitones;
-    
     saveKeyForSong(currentSong.id, globalSemitones);
-
     renderCurrentSong();
     sendP2PData({ type: 'CHANGE_KEY', semitones: globalSemitones });
   } else {
@@ -795,39 +833,4 @@ function extractIntroContent(content, role, semitones) {
     }
     return `Tocar en Tono ${calcularNotaTono(currentSong.keyOriginal, semitones)}`;
   }
-}
-
-function triggerJump(secId) {
-  currentSectionId = secId;
-  highlightAndScrollSection(secId);
-  sendP2PData({ type: 'JUMP', target: secId });
-}
-
-function highlightAndScrollSection(secId) {
-  const targetEl = document.getElementById(`sec-${secId}`);
-  if (!targetEl) return;
-
-  const isDirector = document.getElementById('director-checkbox')?.checked;
-  const directorPanel = document.getElementById('director-panel');
-
-  let offsetMargin = 20;
-
-  if (isDirector && directorPanel && directorPanel.style.display !== 'none') {
-    offsetMargin = directorPanel.offsetHeight + 15;
-  }
-
-  const elementPosition = targetEl.getBoundingClientRect().top + window.pageYOffset;
-  const targetY = elementPosition - offsetMargin;
-
-  window.scrollTo({
-    top: targetY,
-    behavior: 'smooth'
-  });
-
-  document.querySelectorAll('.section-highlight').forEach(el => el.classList.remove('section-highlight'));
-  targetEl.classList.add('section-highlight');
-
-  setTimeout(() => {
-    targetEl.classList.remove('section-highlight');
-  }, 2500);
 }
