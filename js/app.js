@@ -1,4 +1,4 @@
-// CLAVES DE ALMACENAMIENTO CON PREFIJO ÚNICO PARA DANSINGAPP
+// CLAVES DE ALMACENAMIENTO CON PREFIJO ÚNICO
 const STORAGE_USER_NAME     = 'dansing_user_name';
 const STORAGE_USER_ROLE     = 'dansing_user_role';
 const STORAGE_USER_UUID     = 'dansing_user_uuid';
@@ -74,14 +74,12 @@ function checkUserSession() {
     
     document.getElementById('profile-info').innerText = `${savedName} (${getRoleBadge(savedRole)})`;
     
-    // Activar estilo de Modo TV / Proyección
     if (savedRole === 'tv') {
       document.body.classList.add('mode-tv');
     } else {
       document.body.classList.remove('mode-tv');
     }
 
-    // Controles de metrónomo exclusivos para Baterista
     if (savedRole === 'baterista') {
       document.getElementById('metronome-controls').style.display = 'flex';
     } else {
@@ -158,10 +156,23 @@ function connectToLeader(roomCode) {
   });
 }
 
+function applyDirectorAdaptivity() {
+  const isDirector = document.getElementById('director-checkbox')?.checked;
+  const savedRole = localStorage.getItem(STORAGE_USER_ROLE);
+
+  if (isDirector && savedRole === 'voces') {
+    document.body.classList.add('director-voice-mode');
+  } else {
+    document.body.classList.remove('director-voice-mode');
+  }
+}
+
 function toggleDirector(isDirectorCheck) {
   const checkbox = document.getElementById('director-checkbox');
   const roomCode = localStorage.getItem(STORAGE_ROOM_CODE) || 'ensayo';
   const savedName = localStorage.getItem(STORAGE_USER_NAME);
+
+  applyDirectorAdaptivity();
 
   if (isDirectorCheck) {
     document.getElementById('net-status').innerHTML = `<span style="color:var(--accent-orange)">🔍 Comprobando si hay Director activo...</span>`;
@@ -184,6 +195,7 @@ function toggleDirector(isDirectorCheck) {
         if (err.type === 'DIRECTOR_TAKEN') {
           alert(`❌ Hay un Director activo respondiendo en el ensayo.`);
           checkbox.checked = false;
+          applyDirectorAdaptivity();
           document.getElementById('director-catalog-card').style.display = 'none';
           renderSetlistUI();
         }
@@ -200,7 +212,6 @@ function toggleDirector(isDirectorCheck) {
   }
 }
 
-// POP DISCRETO AL CONECTAR EN MODO TV
 function triggerTvConnectPop(directorName) {
   const role = localStorage.getItem(STORAGE_USER_ROLE);
   if (role !== 'tv') return;
@@ -220,7 +231,7 @@ function triggerTvConnectPop(directorName) {
   }, 1500);
 }
 
-// MANEJO DE RECEPCIÓN DE DATOS P2P
+// RECEPCIÓN DE DATOS Y EVENTOS
 function handleIncomingP2PData(data) {
   if (!data) return;
 
@@ -275,7 +286,7 @@ function handleIncomingP2PData(data) {
       updateBpmUI(currentBpm);
     }
 
-    const btnCD = document.getElementById('btn-start-countdown');
+    const btnCD = document.getElementById('btn-start-countdown') || document.getElementById('btn-start-countdown-voice') || document.getElementById('btn-start-countdown-inst');
     if (btnCD) btnCD.style.display = 'block';
 
     log(`🎵 Canción lista: ${currentSong.title}`);
@@ -323,13 +334,12 @@ function handleIncomingP2PData(data) {
     }
   }
 
-if (data.type === 'STOP_SONG') {
+  if (data.type === 'STOP_SONG') {
     stopMetronomeVisual();
     
     const role = localStorage.getItem(STORAGE_USER_ROLE);
 
     if (role === 'tv') {
-      // 1. Crear el contenedor del flash si no existe en el DOM
       let flashEl = document.getElementById('tv-flash-burst');
       if (!flashEl) {
         flashEl = document.createElement('div');
@@ -337,17 +347,13 @@ if (data.type === 'STOP_SONG') {
         document.body.appendChild(flashEl);
       }
 
-      // 2. Disparar el destello de platillo
       flashEl.classList.remove('animate-burst');
-      void flashEl.offsetWidth; // Forzar reflow para reiniciar la animación
+      void flashEl.offsetWidth;
       flashEl.classList.add('animate-burst');
 
-      // 3. Ocultar letras y título justo en el clímax del destello (a los 200ms)
       setTimeout(() => {
         const songTitleEl = document.getElementById('song-title');
-        if (songTitleEl) {
-          songTitleEl.classList.remove('show-intro-title');
-        }
+        if (songTitleEl) songTitleEl.classList.remove('show-intro-title');
 
         document.querySelectorAll('.tv-section-block').forEach(el => {
           el.classList.remove('active-tv-section');
@@ -357,7 +363,7 @@ if (data.type === 'STOP_SONG') {
       }, 200);
 
     } else {
-      const btnCD = document.getElementById('btn-start-countdown');
+      const btnCD = document.getElementById('btn-start-countdown') || document.getElementById('btn-start-countdown-voice') || document.getElementById('btn-start-countdown-inst');
       if (btnCD) btnCD.style.display = 'block';
     }
 
@@ -371,7 +377,7 @@ if (data.type === 'STOP_SONG') {
   }
 }
 
-// METRÓNOMO EXCLUSIVO DE BATERISTA
+// METRÓNOMO BATERISTA
 function adjustBpm(delta) {
   if (localStorage.getItem(STORAGE_USER_ROLE) !== 'baterista') return;
 
@@ -445,8 +451,10 @@ function startMetronomeVisual() {
   const light = document.getElementById('metronome-light');
 
   metronomeInterval = setInterval(() => {
-    light.classList.add('flash');
-    setTimeout(() => light.classList.remove('flash'), 120);
+    if (light) {
+      light.classList.add('flash');
+      setTimeout(() => light.classList.remove('flash'), 120);
+    }
   }, intervalMs);
 }
 
@@ -454,7 +462,8 @@ function stopMetronomeVisual() {
   if (metronomeInterval) clearInterval(metronomeInterval);
   isMetronomePlaying = false;
   updateMetronomeButtonUI();
-  document.getElementById('metronome-light').classList.remove('flash');
+  const light = document.getElementById('metronome-light');
+  if (light) light.classList.remove('flash');
 }
 
 function saveBpmForSong(songId, bpm) {
@@ -468,7 +477,7 @@ function getSavedBpmForSong(songId) {
   return saved[songId] !== undefined ? saved[songId] : null;
 }
 
-// SETLIST PERSISTENCIA
+// SETLIST PERSISTENCIA Y REPOSITORIO
 function toggleCatalogVisibility() {
   const wrapper = document.getElementById('catalog-foldable-wrapper');
   if (!wrapper) return;
@@ -530,7 +539,6 @@ function renderSetlistUI() {
   container.innerHTML = html;
 }
 
-// CATÁLOGO DE CANCIONES
 function renderCatalog(filter = "") {
   const container = document.getElementById('catalog-list');
   if (!container) return;
@@ -603,7 +611,7 @@ function directorSelectSong(songId) {
   log(`📢 Canción transmitida: ${currentSong.title}`);
 }
 
-// RENDERIZADO DE CANCIÓN CON BLOQUES ESTRUCTURADOS PARA MODO TV
+// RENDERIZADO DE CANCIÓN
 function renderCurrentSong() {
   if (!currentSong) return;
 
@@ -633,9 +641,7 @@ function renderCurrentSong() {
       sections.push({ name, id: secId });
 
       if (role === 'tv') {
-        if (isInsideTvBlock) {
-          html += `</div>`; // Cerrar el bloque de la sección anterior
-        }
+        if (isInsideTvBlock) html += `</div>`;
         html += `<div class="tv-section-block" id="tv-sec-${secId}">`;
         isInsideTvBlock = true;
       } else {
@@ -646,7 +652,6 @@ function renderCurrentSong() {
         html += `<span class="chord">${line}</span>\n`;
       }
     } else {
-      // En Modo TV incluimos las líneas del texto con su salto correspondiente
       if (role === 'tv') {
         if (trimmed.length > 0) {
           html += `<div class="tv-lyric-line">${trimmed}</div>`;
@@ -658,45 +663,170 @@ function renderCurrentSong() {
   });
 
   if (role === 'tv' && isInsideTvBlock) {
-    html += `</div>`; // Cerrar el último bloque
+    html += `</div>`;
   }
 
   viewer.innerHTML = html;
   buildDirectorControls(sections);
   updateKeyControlsUI(semitonesToUse);
 
-  // En Modo TV forzamos la visualización de la primera sección
   if (role === 'tv') {
     const targetSection = currentSectionId || (sections.length > 0 ? sections[0].id : 'intro');
     showTvSectionOnly(targetSection);
   }
 }
 
-// CONTROL DE VISIBILIDAD DE TÍTULO Y LETRAS EN MODO TV
+// CONSTRUCCIÓN DEL PANEL DEL DIRECTOR CON BOTÓN DE CONTEO RÁPIDO
+function buildDirectorControls(sections) {
+  const container = document.getElementById('section-buttons');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const savedRole = localStorage.getItem(STORAGE_USER_ROLE);
+  const isVoiceDirector = savedRole === 'voces';
+
+  if (isVoiceDirector) {
+    // --- DIRECTOR VOCES ---
+    const bpmEl = document.createElement('div');
+    bpmEl.className = 'voice-director-bpm';
+    bpmEl.innerText = `⏱️ BPM: ${currentBpm}`;
+    container.appendChild(bpmEl);
+
+    const songNameEl = document.createElement('div');
+    songNameEl.className = 'voice-director-song-name';
+    songNameEl.innerText = currentSong ? currentSong.title : 'Selecciona una canción';
+    container.appendChild(songNameEl);
+
+    const btnCountdown = document.createElement('button');
+    btnCountdown.id = 'btn-start-countdown-voice';
+    btnCountdown.innerText = '⏱️ Iniciar cuenta regresiva (3, 2, 1)';
+    btnCountdown.onclick = () => sendCountdownCommand();
+    container.appendChild(btnCountdown);
+
+    const sectionsGrid = document.createElement('div');
+    sectionsGrid.className = 'voice-sections-grid';
+
+    sections.forEach((sec) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-voice-section';
+      btn.id = `btn-sec-ctrl-${sec.id}`;
+      btn.innerText = sec.name;
+      btn.onclick = () => {
+        highlightActiveDirectorButton(sec.id);
+        triggerJump(sec.id);
+      };
+      sectionsGrid.appendChild(btn);
+    });
+    container.appendChild(sectionsGrid);
+
+    const actionsGrid = document.createElement('div');
+    actionsGrid.className = 'voice-actions-grid';
+
+    const actions = [
+      { label: '🔁 Repetir Coro', msg: '🔁 Repetir Coro' },
+      { label: '🛑 Finalizar', msg: 'Finalizar', isStop: true },
+      { label: '🤫 Solo Voces', msg: '🤫 Solo Voces' },
+      { label: '🎹 Instrumental', msg: '🎹 Instrumental/Espontáneo' }
+    ];
+
+    actions.forEach(act => {
+      const b = document.createElement('button');
+      b.className = `btn-voice-action ${act.isStop ? 'btn-action-stop' : ''}`;
+      b.innerText = act.label;
+      b.onclick = () => {
+        if (act.isStop) {
+          stopMetronomeVisual();
+          sendP2PData({ type: 'STOP_SONG' });
+        }
+        sendQuickAlert(act.msg);
+      };
+      actionsGrid.appendChild(b);
+    });
+
+    container.appendChild(actionsGrid);
+
+  } else {
+    // --- LAYOUT DIRECTOR INSTRUMENTISTA ---
+    
+    // 1. Contenedor de Acciones Rápidas (Conteo + Finalizar)
+    const topActions = document.createElement('div');
+    topActions.className = 'inst-top-actions';
+
+    const btnCountdown = document.createElement('button');
+    btnCountdown.id = 'btn-start-countdown-inst';
+    btnCountdown.innerText = '⏱️ Cuenta Regresiva';
+    btnCountdown.onclick = () => sendCountdownCommand();
+    topActions.appendChild(btnCountdown);
+
+    const btnStop = document.createElement('button');
+    btnStop.className = 'btn-inst-stop';
+    btnStop.innerText = '🛑 Finalizar';
+    btnStop.onclick = () => {
+      stopMetronomeVisual();
+      sendP2PData({ type: 'STOP_SONG' });
+      sendQuickAlert('Finalizar');
+    };
+    topActions.appendChild(btnStop);
+
+    container.appendChild(topActions);
+
+    // 2. Grid de 3 columnas para secciones
+    const instGrid = document.createElement('div');
+    instGrid.className = 'instrument-sections-grid';
+
+    sections.forEach((sec) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn-inst-section';
+      btn.id = `btn-sec-ctrl-${sec.id}`;
+      btn.innerText = sec.name;
+      btn.onclick = () => {
+        highlightActiveDirectorButton(sec.id);
+        triggerJump(sec.id);
+      };
+      instGrid.appendChild(btn);
+    });
+
+    container.appendChild(instGrid);
+  }
+
+  if (currentSectionId) {
+    highlightActiveDirectorButton(currentSectionId);
+  }
+}
+
+function highlightActiveDirectorButton(secId) {
+  document.querySelectorAll('.btn-voice-section, .btn-inst-section').forEach(btn => {
+    btn.classList.remove('active-director-section', 'active-inst-section');
+  });
+
+  const activeBtn = document.getElementById(`btn-sec-ctrl-${secId}`);
+  if (activeBtn) {
+    if (activeBtn.classList.contains('btn-voice-section')) {
+      activeBtn.classList.add('active-director-section');
+    } else {
+      activeBtn.classList.add('active-inst-section');
+    }
+  }
+}
+
 function showTvSectionOnly(secId) {
   const songTitleEl = document.getElementById('song-title');
 
-  // Si se selecciona INTRO o no hay sección activa
   if (!secId || secId === 'intro' || secId.includes('intro')) {
-    // 1. Ocultar todos los bloques de letras
     document.querySelectorAll('.tv-section-block').forEach(el => {
       el.classList.remove('active-tv-section');
     });
 
-    // 2. Mostrar el título gigante centrado
     if (songTitleEl) {
       songTitleEl.classList.add('show-intro-title');
     }
     return;
   }
 
-  // Si se selecciona un VERSO, CORO, PUENTE, etc.
-  // 1. Ocultar el título de la canción
   if (songTitleEl) {
     songTitleEl.classList.remove('show-intro-title');
   }
 
-  // 2. Ocultar demás secciones y activar únicamente la seleccionada
   document.querySelectorAll('.tv-section-block').forEach(el => {
     el.classList.remove('active-tv-section');
   });
@@ -715,28 +845,39 @@ function triggerJump(secId) {
 
 function highlightAndScrollSection(secId) {
   const role = localStorage.getItem(STORAGE_USER_ROLE);
+  const isDirector = document.getElementById('director-checkbox')?.checked;
 
   if (role === 'tv') {
     showTvSectionOnly(secId);
     return;
   }
 
+  // DIRECTOR VOCES: Scroll directo a "Saltos y Control"
+  if (isDirector && role === 'voces') {
+    const jumpsHeader = document.getElementById('director-panel');
+    if (jumpsHeader) {
+      const offsetTop = jumpsHeader.getBoundingClientRect().top + window.pageYOffset;
+      window.scrollTo({ top: offsetTop - 10, behavior: 'smooth' });
+    }
+    highlightActiveDirectorButton(secId);
+    return;
+  }
+
+  // MÚSICOS E INSTRUMENTISTAS: Scroll calculado para no tapar la canción con la barra sticky
   const targetEl = document.getElementById(`sec-${secId}`);
   if (!targetEl) return;
 
-  const isDirector = document.getElementById('director-checkbox')?.checked;
-  const directorPanel = document.getElementById('director-panel');
   const metronomeCard = document.getElementById('metronome-card');
+  const directorPanel = document.getElementById('director-panel');
 
-  let metroHeight = metronomeCard ? metronomeCard.offsetHeight : 0;
-  let offsetMargin = metroHeight + 15;
-
+  let extraMargin = 15;
+  if (metronomeCard) extraMargin += metronomeCard.offsetHeight;
   if (isDirector && directorPanel && directorPanel.style.display !== 'none') {
-    offsetMargin += directorPanel.offsetHeight + 10;
+    extraMargin += directorPanel.offsetHeight;
   }
 
   const elementPosition = targetEl.getBoundingClientRect().top + window.pageYOffset;
-  const targetY = elementPosition - offsetMargin;
+  const targetY = elementPosition - extraMargin;
 
   window.scrollTo({
     top: targetY,
@@ -749,9 +890,11 @@ function highlightAndScrollSection(secId) {
   setTimeout(() => {
     targetEl.classList.remove('section-highlight');
   }, 2500);
+
+  highlightActiveDirectorButton(secId);
 }
 
-// CHAT FLOTANTE MÓVIL
+// CHAT FLOTANTE
 function toggleChatPanel() {
   const panel = document.getElementById('chat-panel');
   if (!panel) return;
@@ -783,7 +926,12 @@ function appendChatMessage(author, text) {
 
 // CUENTA REGRESIVA
 function sendCountdownCommand() {
+  const btnCDVoice = document.getElementById('btn-start-countdown-voice');
+  const btnCDInst = document.getElementById('btn-start-countdown-inst');
   const btnCD = document.getElementById('btn-start-countdown');
+  
+  if (btnCDVoice) btnCDVoice.style.display = 'none';
+  if (btnCDInst) btnCDInst.style.display = 'none';
   if (btnCD) btnCD.style.display = 'none';
 
   runCountdownAnimation();
@@ -791,7 +939,6 @@ function sendCountdownCommand() {
   log('⏱️ Cuenta regresiva iniciada...');
 }
 
-// CUENTA REGRESIVA CON AUTO-ACTIVACIÓN DE PRIMERA SECCIÓN/INTRO
 function runCountdownAnimation() {
   const overlay = document.getElementById('countdown-overlay');
   const numEl = document.getElementById('countdown-number');
@@ -825,10 +972,8 @@ function runCountdownAnimation() {
       numEl.innerText = "🔥";
       introLabelEl.innerText = "¡ENTRAMOS YA!";
       
-      // 1. Iniciar Metrónomo
       startMetronomeVisual();
-      
-      // 2. AUTO-SELECCIONAR INTRO O PRIMERA SECCIÓN AL TERMINAR EL CONTEO
+
       const firstSectionHeader = document.querySelector('.section-header') || document.querySelector('.tv-section-block');
       let firstSecId = 'intro';
 
@@ -836,7 +981,6 @@ function runCountdownAnimation() {
         firstSecId = firstSectionHeader.id.replace('sec-', '').replace('tv-sec-', '');
       }
 
-      // Activar el salto automáticamente para toda la banda y la TV
       triggerJump(firstSecId);
 
     } else {
@@ -846,49 +990,7 @@ function runCountdownAnimation() {
   }, 1000);
 }
 
-// AUXILIARES CONTROLES DIRECTOR
-function buildDirectorControls(sections) {
-  const container = document.getElementById('section-buttons');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const btnCountdown = document.createElement('button');
-  btnCountdown.id = 'btn-start-countdown';
-  btnCountdown.className = 'btn btn-orange';
-  btnCountdown.style.cssText = 'margin-bottom: 10px; font-size: 0.95rem;';
-  btnCountdown.innerText = '⏱️ Iniciar Cuenta Regresiva (3, 2, 1)';
-  btnCountdown.onclick = () => sendCountdownCommand();
-  container.appendChild(btnCountdown);
-
-  sections.forEach((sec) => {
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-sec';
-    btn.innerText = sec.name;
-    btn.onclick = () => triggerJump(sec.id);
-    container.appendChild(btn);
-  });
-
-  const alertContainer = document.createElement('div');
-  alertContainer.style.cssText = 'width:100%; margin-top:10px; border-top:1px solid #333; padding-top:8px; display:flex; flex-wrap:wrap; gap:4px;';
-  
-  const alerts = ["🔁 Repetir Coro", "🛑 Finalizar", "🤫 Solo Voces", "🎹 Instrumental/Espontáneo"];
-  alerts.forEach(msg => {
-    const b = document.createElement('button');
-    b.className = 'btn-alert';
-    b.innerText = msg;
-    b.onclick = () => {
-      if (msg.includes("Finalizar")) {
-        stopMetronomeVisual();
-        sendP2PData({ type: 'STOP_SONG' });
-      }
-      sendQuickAlert(msg);
-    };
-    alertContainer.appendChild(b);
-  });
-
-  container.appendChild(alertContainer);
-}
-
+// AUXILIARES
 function sendMusicianAlert(msg) {
   const savedName = localStorage.getItem(STORAGE_USER_NAME) || 'Músico';
   const fullMsg = `📢 ${savedName.toUpperCase()}: ${msg}`;
